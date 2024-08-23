@@ -1,15 +1,39 @@
-#!/bin/bash
-echo -e "\e[1;32m► SELAMAT DATANG DI SSH PREMIUM ◄\e[0m"
-echo -e "\e[1;36m============================================================\e[0m"
-echo -e "\e[1;36m► BACA ATURAN PAKAI\e[0m"
-echo -e "\e[1;36m► NO DODOS\e[0m"
-echo -e "\e[1;36m► NO HACKING\e[0m"
-echo -e "\e[1;36m► NO TORRENT\e[0m"
-echo -e "\e[1;36m► MAX USER 2LOGIN\e[0m"
-echo -e "\e[1;35m► MELANGGAR AKUN AKAN DI BANNED\e[0m"
-echo -e "\e[1;35m► GUNAKAN DENGAN SEBAIK-BAIKNYA\e[0m"
-echo -e "\e[1;35m► SAYANGILAH JANDA & CINTAI PERAWAN\e[0m"
-echo -e "\e[1;35m► GRUP NBC INDONESIA\e[0m"
-echo -e "\e[1;34m► \e[1;36mhttps://wa.me/6281931615811\e[0m"
-echo -e "\e[1;31m► SIAP MELAYANI ANDA\e[0m"
-echo -e "\e[1;31m► GRETONGAN SEDERHANA PENUH RASA\e[0m"
+<font color="#00FF00">
+<H3 style="text-align:left">
+► SELAMAT DATANG DI SSH PREMIUM ◄</H3>
+<hr style="border:1px dashed #00FF00">
+
+<font color="#00FFFF">
+<H3 style="text-align:left">
+► BACA ATURAN PAKAI</H3>
+<H3 style="text-align:left">
+► NO DODOS</H3>
+<H3 style="text-align:left">
+► NO HACKING</H3>
+<H3 style="text-align:left">
+► NO TORRENT</H3>
+<H3 style="text-align:left">
+► MAX USER 2 LOGIN</H3>
+<font>
+
+<font color="#800080">
+<H3 style="text-align:left">
+► MELANGGAR AKUN AKAN DI BANNED</H3>
+<H3 style="text-align:left">
+► GUNAKAN DENGAN SEBAIK-BAIKNYA</H3>
+<H3 style="text-align:left">
+► SAYANGILAH JANDA & CINTAI PERAWAN</H3>
+<H3 style="text-align:left">
+► GRUP NBC INDONESIA</H3>
+<font>
+
+<font color="#FF1493">
+<H3 style="text-align:left">
+► https://wa.me/6281931615811</H3>
+<H3 style="text-align:left">
+► SIAP MELAYANI ANDA</H3>
+<H3 style="text-align:left">
+► GRETONGAN SEDERHANA PENUH RASA</H3>
+<font>
+
+<hr style="border:1px solid #00FFFF">
