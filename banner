@@ -1,26 +1,15 @@
-<font color="white">
-<H3 style="text-align:center">
-🚀 Premium Server SSH Websocket 🚀</span></H3>
-
-<H3 style="text-align:center">
-⛔ NO DDOS ⛔</span></H3>
-
-<H3 style="text-align:center">
-⛔ NO HACKING ⛔</span></H3>
-
-<H3 style="text-align:center">
-⛔ NO TORRENT ⛔</span></H3>
-
-<H3 style="text-align:center">
-⛔ NO SPAMMING ⛔</span></H3>
-
-<H3 style="text-align:center">
-⛔ MAX LOGIN 2 DEVICE ⛔</span></H3>
-
-<H3 style="text-align:center">
-🚀 SILA PATUH PERATURAN 🚀</span></H3>
-<font>
-
-<H3 style="text-align:center">
-👍 Thank you for support 👍</span></H3>
-<font>
+#!/bin/bash
+echo -e "\e[1;32m► SELAMAT DATANG DI SSH PREMIUM ◄\e[0m"
+echo -e "\e[1;36m============================================================\e[0m"
+echo -e "\e[1;36m► BACA ATURAN PAKAI\e[0m"
+echo -e "\e[1;36m► NO DODOS\e[0m"
+echo -e "\e[1;36m► NO HACKING\e[0m"
+echo -e "\e[1;36m► NO TORRENT\e[0m"
+echo -e "\e[1;36m► MAX USER 2LOGIN\e[0m"
+echo -e "\e[1;35m► MELANGGAR AKUN AKAN DI BANNED\e[0m"
+echo -e "\e[1;35m► GUNAKAN DENGAN SEBAIK-BAIKNYA\e[0m"
+echo -e "\e[1;35m► SAYANGILAH JANDA & CINTAI PERAWAN\e[0m"
+echo -e "\e[1;35m► GRUP NBC INDONESIA\e[0m"
+echo -e "\e[1;34m► \e[1;36mhttps://wa.me/6281931615811\e[0m"
+echo -e "\e[1;31m► SIAP MELAYANI ANDA\e[0m"
+echo -e "\e[1;31m► GRETONGAN SEDERHANA PENUH RASA\e[0m"
