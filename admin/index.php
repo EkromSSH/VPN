@@ -30,6 +30,7 @@ if(($_POST["action"]??$_GET["action"]??null)!=null){
  if($a==="create"&&$u){$p=escapeshellcmd($_GET["pass"]??"");$d=intval($_GET["days"]?:30);exec("sudo /usr/local/bin/ssh-admin create $u $p $d 2>/dev/null",$o,$c);$msg=$c===0?"ok_$u":"fail";}
  elseif(($a==="delete"||$a==="del")&&$u){exec("sudo /usr/local/bin/ssh-admin delete $u 2>/dev/null",$o,$c);$msg=$c===0?"del_$u":"nf";}
  elseif($a==="passwd"&&$u){$p=escapeshellcmd($_GET["pass"]??"");exec("sudo /usr/local/bin/ssh-admin passwd $u $p 2>/dev/null",$o,$c);$msg=$c===0?"pw_$u":"pf";}
+ elseif($a==="port"&&$p){$c=intval($p);exec("sudo /usr/local/bin/change-port-web $c 2>/dev/null",$o,$c);$msg=$c===0?"port_$p":"pf";}
  header("Location: ?page=$page&msg=$msg");exit;
 }
 $ip=trim(exec("curl -s ipv4.icanhazip.com")??"");$domain=trim(@file_get_contents("/etc/xray/domain")??"");
@@ -69,6 +70,7 @@ td{padding:8px;border-bottom:1px solid #21262d;font-size:13px;}
 @media(min-width:600px){.header{padding:12px 32px;}.nav{padding:0 32px;}.m{padding:24px 32px;}.gr{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}}
 </style></head><body>
 <div class="header" style="flex-direction:column;padding:16px;gap:4px;"><div class="logo" style="font-size:24px;text-align:center;width:100%;">Ekrom<span>SSH</span> <span style="color:#58a6ff;font-weight:400;">VPN</span></div><div class="spacer"></div></div>
+
 <div class="nav">
 <a href="?page=dashboard" class="<?=$page==='dashboard'?'act':''?>">หน้าแรก</a>
 <a href="?page=create" class="<?=$page==='create'?'act':''?>">สร้าง SSH</a>
@@ -87,6 +89,7 @@ if($m){
  elseif(strpos($m,"pw_")===0){$t='เปลี่ยนรหัสผ่านสำเร็จ';}
  elseif($m==="fail"){$c="#f85149";$t='ล้มเหลว';}
  elseif($m==="nf"){$c="#f85149";$t='ไม่พบผู้ใช้';}
+ elseif(strpos($m,"port_")===0){$t='เปลี่ยนพอร์ตเป็น '.substr($m,5).' สำเร็จ';}
  if($t)echo '<div class="msg" style="color:'.$c.'">'.$t.'</div>';
 }
 if($page==="dashboard"):?>
@@ -102,8 +105,10 @@ if(file_exists("/etc/ssh/.ssh.db")){foreach(file("/etc/ssh/.ssh.db") as$l){if(pr
 
 <?php elseif($page==="create"):?>
 <div class="gr"><div class="cd"><h3>สร้างผู้ใช้ SSH</h3><div><input id="c_user" placeholder="ชื่อผู้ใช้"><input id="c_pass" placeholder="รหัสผ่าน"><input id="c_days" type="number" value="30"><button class="btn-p" onclick="var u=document.getElementById('c_user').value,p=document.getElementById('c_pass').value,d=document.getElementById('c_days').value;if(u&&p){location.href='?page=create&action=create&user='+u+'&pass='+p+'&days='+d;}">สร้าง</button></div></div>
-<div class="cd"><h3>เปลี่ยนรหัสผ่าน</h3><div><select id="cp_user"><option value="">เลือก...</option><?php foreach($users as$u):?><option value="<?=$u?>"><?=$u?></option><?php endforeach;?></select><input id="cp_pass" placeholder="รหัสผ่านใหม่"><button class="btn-p" onclick="var u=document.getElementById('cp_user').value,p=document.getElementById('cp_pass').value;if(u&&p){location.href='?page=create&action=passwd&user='+u+'&pass='+p;}">เปลี่ยน</button></div></div></div>
-
+<div class="cd"><h3>เปลี่ยนรหัสผ่าน</h3><div><select id="cp_user"><option value="">เลือก...</option><?php foreach($users as$u):?><option value="<?=$u?>"><?=$u?></option><?php endforeach;?></select><input id="cp_pass" placeholder="รหัสผ่านใหม่"><button class="btn-p" onclick="var u=document.getElementById('cp_user').value,p=document.getElementById('cp_pass').value;if(u&&p){location.href='?page=create&action=passwd&user='+u+'&pass='+p;}">เปลี่ยน</button></div></div>
+<div class="cd"><h3>เปลี่ยนพอร์ต SSH WS</h3>
+<div><input id="new_port" type="number" placeholder="พอร์ตใหม่" value="8080">
+<button class="btn-p" onclick="var p=document.getElementById('new_port').value;if(p&&p!=8080){location.href='?page=create&action=port&pass='+p;}">เปลี่ยนพอร์ต</button></div></div>
 <?php elseif($page==="delete"):?>
 <div class="cd" style="max-width:400px"><h3>ลบผู้ใช้ SSH</h3><div><select id="del_user"><option value="">เลือก...</option><?php foreach($users as$u):?><option value="<?=$u?>"><?=$u?></option><?php endforeach;?></select><button class="btn-d" onclick="if(document.getElementById('del_user').value){location.href='?page=delete&action=del&user='+document.getElementById('del_user').value;}">ลบ SSH</button></div></div>
 
