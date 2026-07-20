@@ -89,3 +89,10 @@ echo -e ""
 echo -e "  ⚠️  เปลี่ยนรหัส admin ได้ที่:"
 echo -e "     /var/www/admin/index.php (บรรทัด 2)"
 echo ""
+
+# Auto-update
+echo -e "\n${GREEN}[7/7]🔄 ตั้งค่า Auto-Update...${NC}"
+wget -q -O /usr/local/bin/ekrom-update "$GH/admin/auto-update.sh"
+chmod +x /usr/local/bin/ekrom-update
+(crontab -l 2>/dev/null; echo "0 */6 * * * /usr/local/bin/ekrom-update >/dev/null 2>&1") | crontab -
+echo "  ✅ Auto-update ทุก 6 ชม."
