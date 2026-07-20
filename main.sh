@@ -371,6 +371,25 @@ chmod 660 /var/log/msmtp.log
 ln -s /usr/bin/msmtp /usr/sbin/sendmail >/dev/null 2>&1
 ln -s /usr/bin/msmtp /usr/bin/sendmail >/dev/null 2>&1
 ln -s /usr/bin/msmtp /usr/lib/sendmail >/dev/null 2>&1
+ # > Install Python WS handler
+ wget -qO /usr/local/bin/ws-python.py "${REPO}bin/ws-python.py" >/dev/null 2>&1
+ chmod +x /usr/local/bin/ws-python.py
+ cat > /etc/systemd/system/ws-python.service << "SEOF"
+ [Unit]
+ Description=SSH WebSocket Handler (Python)
+ After=network.target
+ [Service]
+ Type=simple
+ ExecStart=/usr/bin/python3 /usr/local/bin/ws-python.py
+ Restart=always
+ RestartSec=3
+ [Install]
+ WantedBy=multi-user.target
+ SEOF
+ systemctl daemon-reload
+ wget -qO /usr/local/bin/change-port "${REPO}bin/change-port" >/dev/null 2>&1
+ chmod +x /usr/local/bin/change-port
+ echo "✅ Python WS handler + change-port installed"
 print_ok "Selesai pemasangan modul tambahan"
 }
 
