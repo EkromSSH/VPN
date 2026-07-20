@@ -1,0 +1,23 @@
+#!/bin/bash
+clear
+red() { echo -e "\\033[32;1m${*}\\033[0m"; }
+clear
+echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e "\e[42m                 ลบผู้ใช้             \E[0m"
+echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+read -p "   ชื่อผู้ใช้ : " USERSSH
+
+if [ -z $USERSSH ]; then
+    echo -e "ชื่อผู้ใช้ไม่สามารถเว้นว่างได้ "
+else
+    if getent passwd $USERSSH >/dev/null 2>&1; then
+        userdel $USERSSH >/dev/null 2>&1
+        sed -i "/^### $USERSSH/d" /etc/ssh/.ssh.db
+        echo -e "ผู้ใช้ $USERSSH ถูกลบแล้ว."
+    else
+        echo -e "ล้มเหลว: ไม่พบผู้ใช้ $USERSSH."
+    fi
+fi
+echo -e ""
+read -n 1 -s -r -p "กดปุ่มใดๆ เพื่อกลับไปที่เมนู"
+menu
