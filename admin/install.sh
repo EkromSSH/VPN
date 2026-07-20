@@ -1,98 +1,91 @@
 #!/bin/bash
-# EkromSSH VPN - Auto Install Web Admin Panel
+# EkromSSH VPN - Complete Auto Installer
 # ใช้: wget -qO- https://raw.githubusercontent.com/EkromSSH/VPN/main/admin/install.sh | bash
 
-set -e
+GREEN='\033[0;32m'; BLUE='\033[0;34m'; NC='\033[0m'
+GH="https://raw.githubusercontent.com/EkromSSH/VPN/main"
+IP=$(curl -s ipv4.icanhazip.com)
 
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+echo -e "${BLUE}══════════════════════════════════════${NC}"
+echo -e "${GREEN}    EKROMSSH VPN - Auto Installer${NC}"
+echo -e "${BLUE}══════════════════════════════════════${NC}"
 
-echo -e "${BLUE}================================${NC}"
-echo -e "${GREEN}  EkromSSH VPN Admin Panel${NC}"
-echo -e "${BLUE}================================${NC}"
+if [[ $EUID -ne 0 ]]; then echo "❌ ต้องรัน root"; exit 1; fi
 
-# Check root
-if [[ $EUID -ne 0 ]]; then
-   echo "❌ ต้องรันด้วย root"
-   exit 1
-fi
-
-# 1. Install dependencies
-echo -e "${GREEN}[1/5]📦 ติดตั้ง Nginx + PHP...${NC}"
+# Base dependencies
+echo -e "\n${GREEN}[1/6]📦 ติดตั้งแพ็กเกจ...${NC}"
 apt update -y
-apt install -y nginx php-fpm php-cli curl sudo
+apt install -y nginx php-fpm php-cli curl sudo jq uuid-runtime xz-utils wget screen git
 
 PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
 echo "✅ PHP $PHP_VER"
 
-# 2. Download admin panel from GitHub
-echo -e "${GREEN}[2/5]📥 ดาวน์โหลด Admin Panel...${NC}"
-mkdir -p /var/www/admin
-wget -q -O /var/www/admin/index.php \
-  "https://raw.githubusercontent.com/EkromSSH/VPN/main/admin/index.php"
-echo "✅ Admin Panel downloaded"
+# Create directories
+echo -e "\n${GREEN}[2/6]📁 สร้างโฟลเดอร์...${NC}"
+mkdir -p /var/www/admin /etc/ssh /etc/vmess /etc/vless /etc/xray
 
-# 3. Download ssh-admin wrapper
-echo -e "${GREEN}[3/5]🔧 ติดตั้ง SSH Admin Wrapper...${NC}"
-wget -q -O /usr/local/bin/ssh-admin \
-  "https://raw.githubusercontent.com/EkromSSH/VPN/main/admin/ssh-admin"
+# Download scripts
+echo -e "\n${GREEN}[3/6]📥 ดาวน์โหลดสคริปต์ระบบ...${NC}"
+for f in menu vmess vless add-ws add-vless del-ws del-vless renew-ws renew-vless cek-ws cek-vless; do
+    wget -q -O /usr/sbin/$f "$GH/admin/$f.sh" 2>/dev/null && chmod +x /usr/sbin/$f && echo "  ✅ $f" || echo "  ⚠️ $f (optional)"
+done
+
+# Download main components
+echo -e "\n${GREEN}[4/6]📥 ดาวน์โหลด Admin Panel...${NC}"
+wget -q -O /var/www/admin/index.php "$GH/admin/index.php"
+echo "  ✅ Admin Panel"
+
+wget -q -O /usr/local/bin/ssh-admin "$GH/admin/ssh-admin"
 chmod +x /usr/local/bin/ssh-admin
+echo "  ✅ SSH Admin Wrapper"
 
-# 4. Setup Nginx + Sudo
-echo -e "${GREEN}[4/5]⚙️ ตั้งค่า Nginx + Sudo...${NC}"
-cat > /etc/nginx/conf.d/admin.conf << 'NGINX'
+# Setup Nginx
+echo -e "\n${GREEN}[5/6]⚙️ ตั้งค่าระบบ...${NC}"
+PHP_SOCK=$(ls /var/run/php/php*-fpm.sock 2>/dev/null | head -1)
+SOCK_NAME=$(basename "$PHP_SOCK" 2>/dev/null || echo "php${PHP_VER}-fpm.sock")
+
+cat > /etc/nginx/conf.d/admin.conf << NGINX
 server {
     listen 8888;
     root /var/www/admin;
     index index.php;
     server_name _;
     location / {
-        try_files $uri $uri/ /index.php?$args;
+        try_files \$uri \$uri/ /index.php?\$args;
     }
-    location ~ \.php$ {
+    location ~ \.php\$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        fastcgi_pass unix:/var/run/php/$SOCK_NAME;
     }
 }
 NGINX
 
-# Fix fastcgi path based on PHP version
-PHP_SOCK=$(ls /var/run/php/php*-fpm.sock 2>/dev/null | head -1)
-if [[ -n "$PHP_SOCK" ]]; then
-    SOCK_NAME=$(basename "$PHP_SOCK")
-    sed -i "s|php-fpm.sock|$SOCK_NAME|" /etc/nginx/conf.d/admin.conf
-fi
-
-# Sudoers for www-data
+# Sudoers
 echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/ssh-admin" > /etc/sudoers.d/ssh-admin
 chmod 440 /etc/sudoers.d/ssh-admin
-
-# Sudo for chage
 echo "www-data ALL=(ALL) NOPASSWD: /usr/bin/chage" > /etc/sudoers.d/chage
 chmod 440 /etc/sudoers.d/chage
 
-# 5. Restart services
-echo -e "${GREEN}[5/5]🔄 รีสตาร์ทบริการ...${NC}"
+# SSH DB
+touch /etc/ssh/.ssh.db
+touch /etc/vmess/.vmess.db
+touch /etc/vless/.vless.db
+
+# Restart services
+echo -e "\n${GREEN}[6/6]🔄 รีสตาร์ทบริการ...${NC}"
 systemctl restart nginx
 systemctl restart php*-fpm 2>/dev/null
 
-# Clean setup
-rm -f /usr/sbin/add-ws /usr/sbin/add-vless 2>/dev/null
-
-# Get IP
-IP=$(curl -s ipv4.icanhazip.com)
-
 echo ""
-echo -e "${BLUE}================================${NC}"
+echo -e "${BLUE}══════════════════════════════════════${NC}"
 echo -e "${GREEN}  ✅ ติดตั้งสำเร็จ!${NC}"
-echo -e "${BLUE}================================${NC}"
+echo -e "${BLUE}══════════════════════════════════════${NC}"
 echo ""
-echo -e "  📍 URL: ${GREEN}http://$IP:8888/${NC}"
+echo -e "  📍 Web Admin: ${GREEN}http://$IP:8888/${NC}"
 echo -e "  🔑 รหัส: ${GREEN}admin123${NC}"
-echo ""
-echo -e "  หมายเหตุ:"
-echo -e "  - เปลี่ยนรหัสผ่านได้ที่ /var/www/admin/index.php บรรทัด 2"
-echo -e "  - ต้องมี SSH DB: /etc/ssh/.ssh.db (สร้างอัตโนมัติ)"
+echo -e ""
+echo -e "  📝 เมนู SSH: ${GREEN}menu${NC}"
+echo -e ""
+echo -e "  ⚠️  เปลี่ยนรหัส admin ได้ที่:"
+echo -e "     /var/www/admin/index.php (บรรทัด 2)"
 echo ""
