@@ -1,7 +1,3 @@
-<br>
-</font></><font color="#00ff80">⊳ SELAMAT DATANG DI SSH PREMIUM ⊲<br></><font color=#00ffbf>┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅</font><br />
-<font color="#00ffff">► BACA ATURAN PAKAI <br></font><font color="#00bfff">► NO DODOS<br></font><font color="#0080ff">► NO HACKING <br></font><font color="#0040ff">► NO TORRENT<br></font><font color="#0000ff">► MAX USER 2LOGIN <br></font><font color="#4000ff">► MELANGGAR AKUN AKAN DI BANNED <br></font><font color="#8000ff">► GUNAKAN DENGAN SEBAIK-BAIKNYA<br></font><font color="#bf00ff">► SAYANGILAH JANDA & CINTAI PERAWAN <br></font><font color="#ff00ff">► GRUP NBC INDONESIA<br></font><font color="#ff00bf">► https://wa.me/6281931615811<br></font><font color="#ff0080">► SIAP MELAYANI ANDA<br></font><font color="#ff0000">► GRETONGAN SEDERHANA PENUH RASA☬<br></><font color=#00BFFF>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬<br>
-</font>
 <?php
 session_start();
 $password = "admin123";
@@ -25,12 +21,11 @@ button{width:100%;padding:12px;background:#238636;border:none;border-radius:8px;
 .err{background:#f8514920;color:#f85149;padding:10px;border-radius:8px;text-align:center;margin-bottom:12px;}
 </style></head><body>
 <div class="box"><h1>EkromVPN</h1><p>Admin Panel</p>
-<?= isset($error)?"<div class=\"err\">$error</div>":"" ?>
-<form method="post"><input type="password" name="pass" placeholder="รหัสผ่าน" required><button>เข้าสู่ระบบ</button></form>
+<?= isset($error)?"<div class="err">$error</div>":"" ?>
+<form method="post"><input type="password" name="pass" placeholder="password" required><button>Login</button></form>
 </div></body></html>
 <?php exit; } }
 if ($_GET["logout"]??null) { session_destroy(); header("Location: /"); exit; }
-
 $page = $_GET["page"] ?? "dashboard";
 if ($_POST["action"]??null) {
     $a=$_POST["action"]; $u=escapeshellcmd($_POST["username"]??"");
@@ -39,27 +34,22 @@ if ($_POST["action"]??null) {
     elseif ($a==="passwd"&&$u) {$p=escapeshellcmd($_POST["password"]??"");exec("sudo /usr/local/bin/ssh-admin passwd $u $p 2>/dev/null",$o,$c);$msg=$c===0?"pw_$u":"pf";}
     header("Location: ?page=$page&msg=$msg");exit;
 }
-
 $ip=trim(exec("curl -s ipv4.icanhazip.com")??"");
 $domain=trim(@file_get_contents("/etc/xray/domain")??"");
-$ram_t=trim(exec("free -h|grep Mem|awk '{print \$2}'")??"");
-$ram_u=trim(exec("free -h|grep Mem|awk '{print \$3}'")??"");
-$uptime=trim(exec("uptime -p|cut -d' ' -f2-")??"");
-$port="8080";
-$online=trim(exec("ps aux|grep -E 'sshd:.*@'|grep -v grep|awk '{print \$NF}'|sed 's/@.*//'|sort -u|wc -l")?:"0");
+$ram_t=trim(exec("free -h|grep Mem|awk '{print $2}'")??"");$ram_u=trim(exec("free -h|grep Mem|awk '{print $3}'")??"");
+$uptime=trim(exec("uptime -p|cut -d' ' -f2-")??"");$port="8080";
+$online=trim(exec("ps aux|grep -E 'sshd:.*@'|grep -v grep|awk '{print $NF}'|sort -u|wc -l")?:"0");
 $users=[];if(file_exists("/etc/ssh/.ssh.db")){foreach(file("/etc/ssh/.ssh.db") as$l){if(preg_match("/^### (.+)/",$l,$m))$users[]=trim($m[1]);}}
-$sv=[];$sn=["OpenSSH","Dropbear","Nginx","Xray","SSH WS","Squid","OpenVPN","BadVPN"];$sc=["ssh","dropbear","nginx","xray","ws-ssh","squid","openvpn","badvpn1"];
-foreach($sc as$i=>$c){$sv[$sn[$i]]=trim(exec("systemctl is-active $c 2>/dev/null"));}
-$ol=[];exec("ps aux|grep -E 'sshd:.*@'|grep -v grep|awk '{print \$NF}'|sort -u",$ol);
+$ol=[];exec("ps h -o user -C sshd 2>/dev/null|grep -v root|sort -u",$ol);
 function m($m){if(!$m)return;$c="#3fb950";$t="";
-if(strpos($m,"ok_")===0){$t=' สร้าง user '.substr($m,3).' สำเร็จ';}
-elseif(strpos($m,"del_")===0){$t=' ลบ user '.substr($m,4).' สำเร็จ';}
-elseif(strpos($m,"pw_")===0){$t='เปลี่ยนรหัส '.substr($m,3).' สำเร็จ';}
-elseif($m==="fail"){$c="#f85149";$t=' สร้างไม่สำเร็จ';}
-elseif($m==="nf"){$c="#f85149";$t='ไม่พบ user';}
-elseif($m==="pf"){$c="#f85149";$t='เปลี่ยนรหัสไม่สำเร็จ';}
-if($t)echo"<div class=\"msg\" style=\"color:$c\">$t</div>";}
-$ts=["dashboard"=>" Dashboard","create"=>" สร้างผู้ใช้ SSH","delete"=>" ลบผู้ใช้ SSH","online"=>" ผู้ใช้ออนไลน์","settings"=>" ตั้งค่าระบบ"];
+if(strpos($m,"ok_")===0){$t='create '.substr($m,3).' ok';}
+elseif(strpos($m,"del_")===0){$t='delete '.substr($m,4).' ok';}
+elseif(strpos($m,"pw_")===0){$t='password '.substr($m,3).' ok';}
+elseif($m==="fail"){$c="#f85149";$t='create failed';}
+elseif($m==="nf"){$c="#f85149";$t='not found';}
+elseif($m==="pf"){$c="#f85149";$t='password failed';}
+if($t)echo"<div class="msg" style="color:$c">$t</div>";}
+$ts=["dashboard"=>"Dashboard","create"=>"Create SSH","delete"=>"Delete SSH","online"=>"Online Users","settings"=>"Settings"];
 $pa=$ts[$page]??"Dashboard";
 ?>
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>EkromVPN</title>
@@ -67,7 +57,7 @@ $pa=$ts[$page]??"Dashboard";
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0d1117;color:#c9d1d9;min-height:100vh;}
-.bar{display:flex;align-items:center;gap:8px;background:#161b22;padding:10px 12px;border-bottom:1px solid #30363d;position:sticky;top:0;z-index:10;}
+.bar{display:flex;align-items:center;gap:8px;background:#161b22;padding:10px 12px;border-bottom:1px solid #30363d;position:sticky;top:0;z-index:10;flex-wrap:wrap;}
 .bar .t{color:#58a6ff;font-size:15px;font-weight:700;white-space:nowrap;}
 .bar .r{margin-left:auto;color:#8b949e;font-size:11px;white-space:nowrap;}
 .nav{display:flex;gap:2px;overflow-x:auto;flex:1;margin:0 4px;scrollbar-width:none;}
@@ -85,9 +75,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0d1117;
 .r:last-child{border:none;}
 .l{color:#8b949e;font-size:12px;}
 .v{color:#c9d1d9;font-size:13px;font-weight:500;}
-.bdg{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
-.bg{background:#23863620;color:#3fb950;}
-.br{background:#f8514920;color:#f85149;}
 input,select{width:100%;padding:10px 12px;margin:0 0 8px 0;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#c9d1d9;font-size:16px;-webkit-appearance:none;}
 input:focus,select:focus{border-color:#58a6ff;outline:none;}
 button{width:100%;padding:11px;background:#238636;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;}
@@ -101,77 +88,71 @@ td{padding:7px 8px;border-bottom:1px solid #21262d;font-size:13px;}
 <div class="bar"><span class="t">EkromVPN</span>
 <div class="nav">
 <a href="?page=dashboard" class="<?=$page==='dashboard'?'act':''?>">Dashboard</a>
-<a href="?page=create" class="<?=$page==='create'?'act':''?>">สร้างผู้ใช้</a>
-<a href="?page=delete" class="<?=$page==='delete'?'act':''?>">ลบผู้ใช้</a>
-<a href="?page=online" class="<?=$page==='online'?'act':''?>">ออนไลน์</a>
-<a href="?page=settings" class="<?=$page==='settings'?'act':''?>">ตั้งค่า</a>
-</div><span class="r"><?=$ip?></span><a href="?logout=1" style="color:#8b949e;text-decoration:none;font-size:12px;white-space:nowrap;">ออก</a>
+<a href="?page=create" class="<?=$page==='create'?'act':''?>">Create</a>
+<a href="?page=delete" class="<?=$page==='delete'?'act':''?>">Delete</a>
+<a href="?page=online" class="<?=$page==='online'?'act':''?>">Online</a>
+<a href="?page=settings" class="<?=$page==='settings'?'act':''?>">Settings</a>
+</div><span class="r"><?=$ip?></span><a href="?logout=1" style="color:#8b949e;text-decoration:none;font-size:12px;white-space:nowrap;">Logout</a>
 </div>
 <div class="m">
-<div class="hd"><h2><?=$pa?></h2><span style="color:#8b949e;font-size:11px;"><?=$ip?></span></div>
+<div class="hd"><h2><?=$pa?></h2></div>
 <?php m($_GET["msg"]??""); ?>
 
 <?php if($page==="dashboard"):?>
 <div class="gr">
-<div class="cd"><h3>ระบบ</h3>
+<div class="cd"><h3>System</h3>
 <div class="r"><span class="l">IP</span><span class="v"><?=$ip?></span></div>
-<div class="r"><span class="l">โดเมน</span><span class="v"><?=$domain?:'-'?></span></div>
+<div class="r"><span class="l">Domain</span><span class="v"><?=$domain?:'-'?></span></div>
 <div class="r"><span class="l">RAM</span><span class="v"><?=$ram_u?>/<?=$ram_t?></span></div>
 <div class="r"><span class="l">Uptime</span><span class="v"><?=$uptime?></span></div>
 <div class="r"><span class="l">SSH WS Port</span><span class="v"><?=$port?></span></div>
 </div>
-<div class="cd"><h3>ผู้ใช้</h3>
-<div class="r"><span class="l">ทั้งหมด</span><span class="v"><?=count($users)?> คน</span></div>
-<div class="r"><span class="l">ออนไลน์</span><span class="v"><?=$online?> คน</span></div>
-</div>
-</div>
-<div class="cd"><h3>ผู้ใช้ทั้งหมด</h3>
-<?php if(count($users)>0):?><table><tr><th>#</th><th>ชื่อ</th><th>สถานะ</th></tr>
-<?php
-$raw=shell_exec("ps h -o user -C sshd 2>/dev/null|grep -v root|sort -u");
-$ol2=array_filter(explode(chr(10),trim($raw)));
-foreach($users as$i=>$u):
-$on=in_array($u,$ol2)?1:0;
-?><tr><td><?=$i+1?></td><td><?=$u?></td><td><?=$on?'<span style="color:#3fb950;font-weight:600;">● Online</span>':'<span style="color:#8b949e;">○ Offline</span>'?></td></tr><?php endforeach;?>
-</table><?php else:?><p style="color:#8b949e;padding:12px 0">ไม่มีผู้ใช้</p><?php endif;?>
+<div class="cd"><h3>Users</h3>
+<div class="r"><span class="l">Total</span><span class="v"><?=count($users)?></span></div>
+<div class="r"><span class="l">Online</span><span class="v"><?=$online?></span></div>
+</div></div>
+<div class="cd"><h3>All Users</h3>
+<?php if(count($users)>0):?><table><tr><th>#</th><th>Name</th><th>Status</th></tr>
+<?php foreach($users as$i=>$u):
+$on=in_array($u,$ol)?1:0;
+?><tr><td><?=$i+1?></td><td><?=$u?></td><td><?=$on?'<span style="color:#3fb950;font-weight:600;">Online</span>':'<span style="color:#8b949e;">Offline</span>'?></td></tr><?php endforeach;?>
+</table><?php else:?><p style="color:#8b949e;padding:12px 0">No users</p><?php endif;?>
 </div>
 
 <?php elseif($page==="create"):?>
 <div class="gr">
-<div class="cd"><h3>สร้างผู้ใช้ SSH</h3>
+<div class="cd"><h3>Create SSH User</h3>
 <form method="post"><input type="hidden" name="action" value="create">
-<input name="username" placeholder="ชื่อผู้ใช้" required>
-<input name="password" placeholder="รหัสผ่าน" required>
-<input name="days" type="number" placeholder="จำนวนวัน" value="30">
-<button>สร้าง</button></form></div>
-<div class="cd"><h3>เปลี่ยนรหัสผ่าน</h3>
+<input name="username" placeholder="Username" required>
+<input name="password" placeholder="Password" required>
+<input name="days" type="number" placeholder="Days" value="30">
+<button>Create</button></form></div>
+<div class="cd"><h3>Change Password</h3>
 <form method="post"><input type="hidden" name="action" value="passwd">
-<select name="username"><option value="">เลือกผู้ใช้...</option>
+<select name="username"><option value="">Select user...</option>
 <?php foreach($users as$u):?><option value="<?=$u?>"><?=$u?></option><?php endforeach;?></select>
-<input name="password" placeholder="รหัสผ่านใหม่" required>
-<button>เปลี่ยน</button></form></div></div>
+<input name="password" placeholder="New password" required>
+<button>Change</button></form></div></div>
 
 <?php elseif($page==="delete"):?>
-<div class="cd" style="max-width:400px"><h3>ลบผู้ใช้ SSH</h3>
-<form method="post" onsubmit="return confirm('ยืนยันลบ?')">
+<div class="cd" style="max-width:400px"><h3>Delete SSH User</h3>
+<form method="post" onsubmit="return confirm('Delete?')">
 <input type="hidden" name="action" value="delete">
-<select name="username"><option value="">เลือกผู้ใช้...</option>
+<select name="username"><option value="">Select user...</option>
 <?php foreach($users as$u):?><option value="<?=$u?>"><?=$u?></option><?php endforeach;?></select>
-<button class="btn2">ลบ</button></form></div>
+<button class="btn2">Delete</button></form></div>
 
 <?php elseif($page==="online"):?>
-<div class="cd"><h3>ผู้ใช้ออนไลน์</h3>
-<?php if(count($ol)>0):?><table><tr><th>#</th><th>ชื่อ</th></tr>
+<div class="cd"><h3>Online Users</h3>
+<?php if(count($ol)>0):?><table><tr><th>#</th><th>Name</th></tr>
 <?php foreach($ol as$i=>$u):?><tr><td><?=$i+1?></td><td><?=$u?></td></tr><?php endforeach;?>
-</table><?php else:?><p style="color:#8b949e;padding:12px 0">ไม่มีผู้ใช้ออนไลน์</p><?php endif;?></div>
+</table><?php else:?><p style="color:#8b949e;padding:12px 0">No online users</p><?php endif;?></div>
 
 <?php elseif($page==="settings"):?>
-<div class="gr">
-
-<div class="cd"><h3>ระบบ</h3>
+<div class="cd"><h3>System</h3>
 <div class="r"><span class="l">SSH WS Port</span><span class="v"><?=$port?></span></div>
 <div class="r"><span class="l">IP</span><span class="v"><?=$ip?></span></div>
-<div class="r"><span class="l">โดเมน</span><span class="v"><?=$domain?:'-'?></span></div>
-</div></div>
+<div class="r"><span class="l">Domain</span><span class="v"><?=$domain?:'-'?></span></div>
+</div>
 <?php endif;?>
 </div></body></html>
