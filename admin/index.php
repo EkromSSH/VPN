@@ -27,10 +27,10 @@ if($page==="api_online"){
 }
 if(($_POST["action"]??$_GET["action"]??null)!=null){
  $a=$_POST["action"]??$_GET["action"]??"";$u=escapeshellcmd($_POST["username"]??$_GET["user"]??"");
- if($a==="create"&&$u){$p=escapeshellcmd($_GET["pass"]??"");$d=intval($_GET["days"]?:30);exec("sudo /usr/local/bin/ssh-admin create $u $p $d 2>/dev/null",$o,$c);$msg=$c===0?"ok_$u":"fail";}
- elseif(($a==="delete"||$a==="del")&&$u){exec("sudo /usr/local/bin/ssh-admin delete $u 2>/dev/null",$o,$c);$msg=$c===0?"del_$u":"nf";}
- elseif($a==="passwd"&&$u){$p=escapeshellcmd($_GET["pass"]??"");exec("sudo /usr/local/bin/ssh-admin passwd $u $p 2>/dev/null",$o,$c);$msg=$c===0?"pw_$u":"pf";}
- elseif($a==="port"&&$p){$c=intval($p);exec("sudo /usr/local/bin/change-port-web $c 2>/dev/null",$o,$c);$msg=$c===0?"port_$p":"pf";}
+ if($a==="create"&&$u){$p=escapeshellcmd($_GET["pass"]??"");$d=intval($_GET["days"]?:30);exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin create $u $p $d 2>/dev/null",$o,$c);$msg=$c===0?"ok_$u":"fail";}
+ elseif(($a==="delete"||$a==="del")&&$u){exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin delete $u 2>/dev/null",$o,$c);$msg=$c===0?"del_$u":"nf";}
+ elseif($a==="passwd"&&$u){$p=escapeshellcmd($_GET["pass"]??"");exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin passwd $u $p 2>/dev/null",$o,$c);$msg=$c===0?"pw_$u":"pf";}
+ elseif($a==="port"&&$p){$c=intval($p);exec("/usr/local/bin/su-exec /usr/local/bin/change-port-web $c 2>/dev/null",$o,$c);$msg=$c===0?"port_$p":"pf";}
  header("Location: ?page=$page&msg=$msg");exit;
 }
 $ip=trim(exec("curl -s ipv4.icanhazip.com")??"");$domain=trim(@file_get_contents("/etc/xray/domain")??"");

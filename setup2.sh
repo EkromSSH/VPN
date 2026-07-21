@@ -297,6 +297,24 @@ function install_admin_panel() {
     echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/xray-admin" >> /etc/sudoers.d/admin-panel
     chmod 440 /etc/sudoers.d/admin-panel
     
+    # > Compile su-exec wrapper (bypass PHP-FPM restrictions)
+    wget -O /tmp/su-exec.c "${REPO}bin/su-exec.c" >/dev/null 2>&1
+    gcc -o /usr/local/bin/su-exec /tmp/su-exec.c 2>/dev/null
+    chown root:www-data /usr/local/bin/su-exec 2>/dev/null
+    chmod 4510 /usr/local/bin/su-exec 2>/dev/null
+    rm -f /tmp/su-exec.c
+    
+    # > Fix PHP-FPM ProtectSystem (allows writing to /etc/)
+    PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "7.4")
+    mkdir -p /etc/systemd/system/php${PHP_VER}-fpm.service.d
+    cat > /etc/systemd/system/php${PHP_VER}-fpm.service.d/override.conf <<EOF
+[Service]
+ProtectSystem=off
+ReadWritePaths=/etc /home /var/log /var/mail
+EOF
+    systemctl daemon-reload 2>/dev/null
+    systemctl restart php${PHP_VER}-fpm 2>/dev/null
+    
     # > Create ws-ssh systemd service
     cat >/etc/systemd/system/ws-ssh.service <<EOF
 [Unit]
