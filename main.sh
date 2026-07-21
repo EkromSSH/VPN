@@ -530,7 +530,7 @@ cd /tmp
 NEVERMORESSH
 first_setup
 dir_xray
-# add_domain (manual via menu option 11)
+add_domain
 install_all
 finish  
 
