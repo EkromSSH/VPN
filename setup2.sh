@@ -33,7 +33,7 @@ KEY="2145515560:AAE9WqfxZzQC-FYF1VUprICGNomVfv6OdTU"
 URL="https://api.telegram.org/bot$KEY/sendMessage"
 REPO="https://raw.githubusercontent.com/EkromSSH/VPN/main/"
 APT="apt-get -y install "
-domain=$(cat /root/domain)
+domain=""
 start=$(date +%s)
 secs_to_human() {
     echo "Installation time : $((${1} / 3600)) hours $(((${1} / 60) % 60)) minute's $((${1} % 60)) seconds"
@@ -128,6 +128,7 @@ function dir_xray() {
 
 ### Add domain
 function add_domain() {
+    rm -f /root/domain /etc/xray/domain
     echo "`cat /etc/banner`"
     read -rp "Input Your Domain For This Server :" -e SUB_DOMAIN
     echo "Host : $SUB_DOMAIN"
@@ -517,6 +518,7 @@ function install_all() {
 }
 
 function finish(){
+    domain=$(cat /root/domain)
     TEXT="
 <u>INFORMATION VPS INSTALL SC</u>
 <code>TIME    : </code><code>${TIME}</code>
