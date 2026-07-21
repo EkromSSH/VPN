@@ -140,7 +140,7 @@ function pasang_ssl() {
     mkdir /root/.acme.sh
     systemctl stop $STOPWEBSERVER
     systemctl stop nginx
-    curl https://raw.githubusercontent.com/EkromSSH/VPN/main/acme.sh -o /root/.acme.sh/acme.sh
+    curl -s https://get.acme.sh | sh
     chmod +x /root/.acme.sh/acme.sh
     /root/.acme.sh/acme.sh --upgrade --auto-upgrade
     /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
@@ -445,7 +445,7 @@ function enable_services(){
 function install_all() {
     base_package
     # dir_xray
-    # add_domain
+    add_domain
     pasang_ssl 
     install_xray >> /root/install.log
     install_ovpn >> /root/install.log
