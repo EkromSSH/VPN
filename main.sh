@@ -446,7 +446,7 @@ function enable_services(){
 function install_all() {
     base_package
     # dir_xray
-    add_domain
+    # add_domain (called from main flow)
     pasang_ssl 
     install_xray >> /root/install.log
     install_ovpn >> /root/install.log
