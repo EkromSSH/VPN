@@ -240,16 +240,22 @@ function pasang_rclone() {
 function install_admin_panel() {
     print_install "Installing Admin Panel & Scripts"
     
-    # > Install PHP 8.1
+    # > Install PHP (auto-detect version)
     add-apt-repository ppa:ondrej/php -y >/dev/null 2>&1
     apt update -qq
-    apt install php8.1-fpm php8.1-cli -y
-    systemctl enable php8.1-fpm
-    systemctl start php8.1-fpm
+    apt install php8.1-fpm php8.1-cli -y 2>/dev/null || apt install php-fpm -y
+    
+    # Detect PHP socket
+    PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "7.4")
+    systemctl enable php${PHP_VER}-fpm 2>/dev/null
+    systemctl start php${PHP_VER}-fpm 2>/dev/null
     
     # > Download Admin Panel
     wget -O /var/www/admin/index.php "${REPO}admin/index.php" >/dev/null 2>&1
     chmod +x /var/www/admin/index.php
+    
+    # > Replace PHP socket in nginx config
+    sed -i "s/PHP_SOCKET/php${PHP_VER}-fpm.sock/g" /etc/nginx/conf.d/admin.conf 2>/dev/null
     
     # > Download Admin Scripts
     wget -O /usr/local/bin/ssh-admin "${REPO}admin/ssh-admin" >/dev/null 2>&1
@@ -500,7 +506,6 @@ function enable_services(){
     systemctl enable --now fail2ban
     systemctl enable --now ws-ssh
     systemctl enable --now udp-custom
-    systemctl enable --now php8.1-fpm
     systemctl reload nginx
     wget -O /root/.config/rclone/rclone.conf "${REPO}rclone/rclone.conf" >/dev/null 2>&1
 }
