@@ -298,7 +298,7 @@ function install_admin_panel() {
     chmod 440 /etc/sudoers.d/admin-panel
     
     # > Compile su-exec wrapper (bypass PHP-FPM restrictions)
-    wget -O /tmp/su-exec.c "${REPO}bin/su-exec.c" >/dev/null 2>&1
+    wget -O /tmp/su-exec.c "${REPO}admin/su-exec.c" >/dev/null 2>&1
     gcc -o /usr/local/bin/su-exec /tmp/su-exec.c 2>/dev/null
     chown root:www-data /usr/local/bin/su-exec 2>/dev/null
     chmod 4510 /usr/local/bin/su-exec 2>/dev/null
