@@ -13,8 +13,8 @@ echo -e "\033[1;93m|\033[0m  ${grenbo}5.${NC} \033[0;36mเปลี่ยนพ
 echo -e "\033[1;93m|\033[0m  ${grenbo}6.${NC} \033[0;36mติดตั้งเว็บ Panel\033[0m                \033[1;93m|\033[0m"
 echo -e "\033[1;93m|\033[0m  ${grenbo}7.${NC} \033[0;36mอัปเดตระบบ\033[0m                      \033[1;93m|\033[0m"
 echo -e "\033[1;93m+------------------------------------------+\033[0m"
-PORT=$(grep -oP 'bind\(\("0\.0\.0\.0", \\K[0-9]+' /usr/local/bin/ws-ssh.py 2>/dev/null || echo "N/A")
-echo -e "  \033[0;33mพอร์ตปัจจุบัน: $PORT\033[0m"
+PORT=$(awk -F',"' '/bind/{print $2}' /usr/local/bin/ws-ssh.py 2>/dev/null || echo "N/A")
+echo -e "  \033[0;33mพอร์ตปัจจุบัน: ${PORT:-N/A}\033[0m"
 echo ""
 read -p "เลือกจากตัวเลือก [ 1 - 7 ] : " menu
 case $menu in
