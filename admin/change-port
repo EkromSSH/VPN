@@ -1,26 +1,67 @@
 #!/bin/bash
-# เปลี่ยนพอร์ต SSH WebSocket
-RED='\033[0;31m'; GREEN='\033[0;32m'; NC='\033[0m'
+# เปลี่ยนพอร์ต SSH WebSocket - รองรับทั้ง ws-ssh.py และ haproxy
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
-CURRENT=$(grep -oP 'bind\("0\.0\.0\.0", \K[0-9]+' /usr/local/bin/ws-ssh.py 2>/dev/null || echo "8080")
+# Detect setup type and current port
+if [ -f /usr/local/bin/ws-ssh.py ]; then
+    # Setup แบบ ws-ssh.py (IP 239 style)
+    CURRENT=$(grep -oP 'bind\("\d+\.\d+\.\d+\.\d+", \K[0-9]+' /usr/local/bin/ws-ssh.py 2>/dev/null)
+    [[ -z "$CURRENT" ]] && CURRENT=$(grep -oP 'bind\("0\.0\.0\.0", \K[0-9]+' /usr/local/bin/ws-ssh.py 2>/dev/null || echo "8080")
+    MODE="ws-ssh"
+elif grep -q "bind \*:80" /etc/haproxy/haproxy.cfg 2>/dev/null; then
+    # Setup แบบ haproxy frontend (IP 31 style)
+    CURRENT=$(grep -oP 'bind \*:\K[0-9]+' /etc/haproxy/haproxy.cfg 2>/dev/null | head -1)
+    [[ -z "$CURRENT" ]] && CURRENT="8080"
+    MODE="haproxy"
+else
+    echo -e "${RED}❌ ไม่พบระบบ SSH WebSocket${NC}"
+    exit 1
+fi
+
 echo -e "🔵 พอร์ต SSH WS ปัจจุบัน: ${GREEN}${CURRENT}${NC}"
 read -p "➜ กรุณากรอกพอร์ตใหม่ (Enter = ยกเลิก): " NEW_PORT
 [[ -z "$NEW_PORT" ]] && { echo -e "${RED}❌ ยกเลิก${NC}"; exit 0; }
 
-if ss -tulpn | grep -q ":${NEW_PORT} " 2>/dev/null; then
-    echo -e "${RED}❌ พอร์ต ${NEW_PORT} ถูกใช้อยู่แล้ว${NC}"
-    exit 1
+# Validate port
+[[ "$NEW_PORT" =~ ^[0-9]+$ ]] || { echo -e "${RED}❌ พอร์ตไม่ถูกต้อง${NC}"; exit 1; }
+[[ $NEW_PORT -ge 1 && $NEW_PORT -le 65535 ]] || { echo -e "${RED}❌ พอร์ตต้องอยู่ระหว่าง 1-65535${NC}"; exit 1; }
+
+# Check if port is in use (skip current port)
+if [ "$NEW_PORT" != "$CURRENT" ]; then
+    if ss -tulpn | grep -q ":${NEW_PORT} " 2>/dev/null; then
+        echo -e "${RED}❌ พอร์ต ${NEW_PORT} ถูกใช้อยู่แล้ว${NC}"
+        exit 1
+    fi
 fi
 
-sed -i "s/bind((\"0.0.0.0\", ${CURRENT})/bind((\"0.0.0.0\", ${NEW_PORT})/" /usr/local/bin/ws-ssh.py 2>/dev/null
-systemctl restart ws-ssh 2>/dev/null
-sleep 1
-
-if systemctl is-active ws-ssh >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ เปลี่ยนพอร์ต ${CURRENT} → ${NEW_PORT} สำเร็จ${NC}"
-    echo -e "📌 ใช้: ssh -p ${NEW_PORT} aa@$(curl -s ipv4.icanhazip.com)"
-else
-    echo -e "${RED}❌ เปลี่ยนไม่สำเร็จ กำลังย้อนกลับ${NC}"
-    sed -i "s/bind((\"0.0.0.0\", ${NEW_PORT})/bind((\"0.0.0.0\", ${CURRENT})/" /usr/local/bin/ws-ssh.py 2>/dev/null
+# Change port based on setup type
+if [ "$MODE" = "ws-ssh" ]; then
+    sed -i "s/bind((\"0.0.0.0\", ${CURRENT})/bind((\"0.0.0.0\", ${NEW_PORT})/" /usr/local/bin/ws-ssh.py 2>/dev/null
+    sed -i "s/bind(\"0.0.0.0\", ${CURRENT})/bind(\"0.0.0.0\", ${NEW_PORT})/" /usr/local/bin/ws-ssh.py 2>/dev/null
     systemctl restart ws-ssh 2>/dev/null
+    sleep 1
+    if systemctl is-active ws-ssh >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ เปลี่ยนพอร์ต ${CURRENT} → ${NEW_PORT} สำเร็จ${NC}"
+    else
+        echo -e "${RED}❌ เปลี่ยนไม่สำเร็จ กำลังย้อนกลับ${NC}"
+        sed -i "s/bind((\"0.0.0.0\", ${NEW_PORT})/bind((\"0.0.0.0\", ${CURRENT})/" /usr/local/bin/ws-ssh.py 2>/dev/null
+        sed -i "s/bind(\"0.0.0.0\", ${NEW_PORT})/bind(\"0.0.0.0\", ${CURRENT})/" /usr/local/bin/ws-ssh.py 2>/dev/null
+        systemctl restart ws-ssh 2>/dev/null
+        exit 1
+    fi
+elif [ "$MODE" = "haproxy" ]; then
+    sed -i "s/bind \*:${CURRENT}/bind \*:${NEW_PORT}/" /etc/haproxy/haproxy.cfg
+    systemctl restart haproxy 2>/dev/null
+    sleep 1
+    if systemctl is-active haproxy >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ เปลี่ยนพอร์ต ${CURRENT} → ${NEW_PORT} สำเร็จ${NC}"
+    else
+        echo -e "${RED}❌ เปลี่ยนไม่สำเร็จ กำลังย้อนกลับ${NC}"
+        sed -i "s/bind \*:${NEW_PORT}/bind \*:${CURRENT}/" /etc/haproxy/haproxy.cfg
+        systemctl restart haproxy 2>/dev/null
+        exit 1
+    fi
 fi
+
+echo -e "📌 ใช้: ssh -p ${NEW_PORT} aa@$(curl -s ipv4.icanhazip.com)"
+sleep 2
