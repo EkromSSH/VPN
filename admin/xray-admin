@@ -1,0 +1,50 @@
+#!/bin/bash
+CONFIG=/etc/xray/config.json
+DOMAIN=$(cat /etc/xray/domain 2>/dev/null || curl -s ipv4.icanhazip.com)
+
+case "$1" in
+    add-vmess)
+        USER=$2; EXP=$3
+        UUID=$(uuidgen)
+        jq --arg u "$USER" --arg id "$UUID" '(.inbounds[] | select(.protocol=="vmess") | .settings.clients) += [{"id":$id,"email":$u,"level":0}]' $CONFIG > /tmp/xray_config.json && mv /tmp/xray_config.json $CONFIG
+        EXP_DATE=$(date -d "+${EXP:-30} days" +%Y-%m-%d)
+        echo "### $USER $EXP_DATE $UUID" >> /etc/vmess/.vmess.db
+        systemctl restart xray 2>/dev/null
+        # Generate vmess link (TLS)
+        VMESS_JSON='{"v":"2","ps":"'$USER'","add":"'$DOMAIN'","port":"443","id":"'$UUID'","aid":"0","net":"ws","path":"/vmess","type":"none","host":"'$DOMAIN'","tls":"tls"}'
+        VMESS_LINK="vmess://$(echo -n "$VMESS_JSON" | base64 -w0)"
+        echo "$VMESS_LINK"
+        ;;
+    del-vmess)
+        USER=$2
+        jq --arg u "$USER" '(.inbounds[] | select(.protocol=="vmess") | .settings.clients) |= map(select(.email!=$u))' $CONFIG > /tmp/xray_config.json && mv /tmp/xray_config.json $CONFIG
+        sed -i "/### $USER/d" /etc/vmess/.vmess.db 2>/dev/null
+        systemctl restart xray 2>/dev/null
+        echo "OK"
+        ;;
+    add-vless)
+        USER=$2; EXP=$3
+        UUID=$(uuidgen)
+        jq --arg u "$USER" --arg id "$UUID" '(.inbounds[] | select(.protocol=="vless") | .settings.clients) += [{"id":$id,"email":$u,"level":0}]' $CONFIG > /tmp/xray_config.json && mv /tmp/xray_config.json $CONFIG
+        EXP_DATE=$(date -d "+${EXP:-30} days" +%Y-%m-%d)
+        echo "### $USER $EXP_DATE $UUID" >> /etc/vless/.vless.db
+        systemctl restart xray 2>/dev/null
+        # Generate vless link (TLS)
+        VLESS_JSON='{"v":"2","ps":"'$USER'","add":"'$DOMAIN'","port":"443","id":"'$UUID'","aid":"0","net":"ws","path":"/vless","type":"none","host":"'$DOMAIN'","tls":"tls"}'
+        VLESS_LINK="vless://$(echo -n "$VLESS_JSON" | base64 -w0)"
+        echo "$VLESS_LINK"
+        ;;
+    del-vless)
+        USER=$2
+        jq --arg u "$USER" '(.inbounds[] | select(.protocol=="vless") | .settings.clients) |= map(select(.email!=$u))' $CONFIG > /tmp/xray_config.json && mv /tmp/xray_config.json $CONFIG
+        sed -i "/### $USER/d" /etc/vless/.vless.db 2>/dev/null
+        systemctl restart xray 2>/dev/null
+        echo "OK"
+        ;;
+    list-vmess)
+        jq -r '.inbounds[] | select(.protocol=="vmess") | .settings.clients[] | "\(.email) \(.id)"' $CONFIG 2>/dev/null
+        ;;
+    list-vless)
+        jq -r '.inbounds[] | select(.protocol=="vless") | .settings.clients[] | "\(.email) \(.id)"' $CONFIG 2>/dev/null
+        ;;
+esac

@@ -1,0 +1,19 @@
+#!/bin/bash
+case "$1" in
+    create)
+        useradd -m -s /bin/sh "$2" 2>/dev/null
+        echo "$2:$3" | chpasswd 2>/dev/null
+        chage -E $(date -d "+$4 days" +%Y-%m-%d) "$2" 2>/dev/null
+        echo "### $2" >> /etc/ssh/.ssh.db
+        echo "OK"
+        ;;
+    delete)
+        userdel -r "$2" 2>/dev/null
+        sed -i "/### $2/d" /etc/ssh/.ssh.db 2>/dev/null
+        echo "OK"
+        ;;
+    passwd)
+        echo "$2:$3" | chpasswd 2>/dev/null
+        echo "OK"
+        ;;
+esac
