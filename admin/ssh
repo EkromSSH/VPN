@@ -27,18 +27,24 @@ case $menu in
 7) 
     echo "🔄 อัปเดตทั้งหมด..."
     GH="https://raw.githubusercontent.com/EkromSSH/VPN/main"
+    echo "--- อัปเดตสคริปต์ ---"
     for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh change-port; do
         wget -q -O /usr/sbin/$f "$GH/admin/$f" && chmod +x /usr/sbin/$f
         echo "  ✅ $f"
     done
     wget -q -O /usr/local/bin/ssh-admin "$GH/admin/ssh-admin" && chmod +x /usr/local/bin/ssh-admin
+    echo "  ✅ ssh-admin"
     wget -q -O /usr/local/bin/ws-ssh.py "$GH/admin/ws-ssh.py" && chmod +x /usr/local/bin/ws-ssh.py
-    wget -q -O /etc/systemd/system/ws-ssh.service "$GH/admin/ws-ssh.service"
-    wget -q -O /etc/haproxy/haproxy.cfg "$GH/admin/haproxy.cfg"
-    wget -q -O /etc/websocket/tun.conf "$GH/admin/tun.conf"
+    echo "  ✅ ws-ssh.py"
+    wget -q -O /etc/systemd/system/ws-ssh.service "$GH/admin/ws-ssh.service" && echo "  ✅ ws-ssh.service"
+    wget -q -O /etc/haproxy/haproxy.cfg "$GH/admin/haproxy.cfg" && echo "  ✅ haproxy.cfg"
+    wget -q -O /etc/websocket/tun.conf "$GH/admin/tun.conf" && echo "  ✅ tun.conf"
+    echo ""
+    echo "--- รีสตาร์ทบริการ ---"
     systemctl daemon-reload
-    systemctl restart ws-ssh 2>/dev/null
-    systemctl restart haproxy 2>/dev/null
+    systemctl restart ws-ssh 2>/dev/null && echo "  ✅ ws-ssh" || echo "  ⚠️ ws-ssh"
+    systemctl restart haproxy 2>/dev/null && echo "  ✅ haproxy" || echo "  ⚠️ haproxy"
+    systemctl restart nginx 2>/dev/null && echo "  ✅ nginx" || echo "  ⚠️ nginx"
     echo ""
     echo "✅ อัปเดตเสร็จ!"
     read -n 1 -s -r -p "Press any key"
