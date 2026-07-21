@@ -125,7 +125,20 @@ function dir_xray() {
 ### Add domain
 function add_domain() {
     echo "`cat /etc/banner`"
-    read -rp "Input Your Domain For This Server :" -e SUB_DOMAIN
+    if [[ -f /root/domain && -n "$(cat /root/domain 2>/dev/null)" ]]; then
+        echo "โดเมนปัจจุบัน: $(cat /root/domain)"
+        cp /root/domain /etc/xray/domain
+    else
+        echo ""
+        echo "============================================"
+        echo "     กรุณากรอกโดเมนของคุณ"
+        echo "============================================"
+        echo ""
+        read -p "  ➜ ใส่โดเมน: " SUB_DOMAIN
+        [[ -z "$SUB_DOMAIN" ]] && { echo "❌ ไม่ได้ใส่โดเมน"; exit 1; }
+        echo $SUB_DOMAIN > /root/domain
+        cp /root/domain /etc/xray/domain
+    fi
     echo "Host : $SUB_DOMAIN"
     echo $SUB_DOMAIN > /root/domain
     cp /root/domain /etc/xray/domain
