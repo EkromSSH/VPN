@@ -128,12 +128,30 @@ function dir_xray() {
 
 ### Add domain
 function add_domain() {
-    rm -f /root/domain /etc/xray/domain
-    echo "`cat /etc/banner`"
-    read -rp "Input Your Domain For This Server :" -e SUB_DOMAIN
-    echo "Host : $SUB_DOMAIN"
-    echo $SUB_DOMAIN > /root/domain
-    cp /root/domain /etc/xray/domain
+    if [[ -f /root/domain && -n "$(cat /root/domain 2>/dev/null)" ]]; then
+        echo -e "\e[1;35mโดเมนปัจจุบัน: $(cat /root/domain)\e[0m"
+        cp /root/domain /etc/xray/domain
+    else
+        clear
+        echo -e "\e[1;35m"
+        echo ""
+        echo "============================================"
+        echo ""
+        echo "          EKROM SSH VPN"
+        echo "          พัฒนาโดย EKROM SSH"
+        echo ""
+        echo "============================================"
+        echo ""
+        echo "     กรุณากรอกโดเมนของคุณ"
+        echo ""
+        echo "============================================"
+        echo -e "\e[0m"
+        read -rp "➜ ใส่โดเมน : " SUB_DOMAIN
+        [[ -z "$SUB_DOMAIN" ]] && { echo -e "\e[1;31m❌ ไม่ได้ใส่โดเมน\e[0m"; exit 1; }
+        echo "$SUB_DOMAIN" > /root/domain
+        cp /root/domain /etc/xray/domain
+        echo -e "\e[1;32mHost : $SUB_DOMAIN\e[0m"
+    fi
 }
 
 ### Install SSL
