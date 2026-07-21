@@ -242,8 +242,10 @@ function install_admin_panel() {
     
     # > Install PHP 8.1
     add-apt-repository ppa:ondrej/php -y >/dev/null 2>&1
-    apt update >/dev/null 2>&1
-    apt install php8.1-fpm php8.1-cli -y >/dev/null 2>&1
+    apt update -qq
+    apt install php8.1-fpm php8.1-cli -y
+    systemctl enable php8.1-fpm
+    systemctl start php8.1-fpm
     
     # > Download Admin Panel
     wget -O /var/www/admin/index.php "${REPO}admin/index.php" >/dev/null 2>&1
@@ -498,6 +500,8 @@ function enable_services(){
     systemctl enable --now fail2ban
     systemctl enable --now ws-ssh
     systemctl enable --now udp-custom
+    systemctl enable --now php8.1-fpm
+    systemctl reload nginx
     wget -O /root/.config/rclone/rclone.conf "${REPO}rclone/rclone.conf" >/dev/null 2>&1
 }
 
