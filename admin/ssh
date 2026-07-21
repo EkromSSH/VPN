@@ -13,9 +13,10 @@ echo -e "\033[1;93m│  ${grenbo}3.${NC} \033[0;36mต่ออายุบั�
 echo -e "\033[1;93m│  ${grenbo}4.${NC} \033[0;36mตรวจสอบ SSH OVPN${NC}"
 echo -e "\033[1;93m│  ${grenbo}5.${NC} \033[0;36mเปลี่ยนพอร์ต SSH WS${NC}"
 echo -e "\033[1;93m│  ${grenbo}6.${NC} \033[0;36mติดตั้งเว็บ Panel${NC}"
+echo -e "\033[1;93m│  ${grenbo}7.${NC} \033[0;36mอัปเดตทั้งหมด${NC}"
 echo -e "\033[1;93m└──────────────────────────────────────────┘\033[0m"
 echo -e ""
-read -p "เลือกจากตัวเลือก [ 1 - 6 ] : " menu
+read -p "เลือกจากตัวเลือก [ 1 - 7 ] : " menu
 case $menu in
 1) add-ssh ;;
 2) del-ssh ;;
@@ -23,5 +24,24 @@ case $menu in
 4) cek-ssh ;;
 5) change-port ;;
 6) wget -qO- "https://raw.githubusercontent.com/EkromSSH/VPN/main/admin/install.sh" | bash ;;
+7) 
+    echo "🔄 อัปเดตทั้งหมด..."
+    GH="https://raw.githubusercontent.com/EkromSSH/VPN/main"
+    for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh change-port; do
+        wget -q -O /usr/sbin/$f "$GH/admin/$f" && chmod +x /usr/sbin/$f
+        echo "  ✅ $f"
+    done
+    wget -q -O /usr/local/bin/ssh-admin "$GH/admin/ssh-admin" && chmod +x /usr/local/bin/ssh-admin
+    wget -q -O /usr/local/bin/ws-ssh.py "$GH/admin/ws-ssh.py" && chmod +x /usr/local/bin/ws-ssh.py
+    wget -q -O /etc/systemd/system/ws-ssh.service "$GH/admin/ws-ssh.service"
+    wget -q -O /etc/haproxy/haproxy.cfg "$GH/admin/haproxy.cfg"
+    wget -q -O /etc/websocket/tun.conf "$GH/admin/tun.conf"
+    systemctl daemon-reload
+    systemctl restart ws-ssh 2>/dev/null
+    systemctl restart haproxy 2>/dev/null
+    echo ""
+    echo "✅ อัปเดตเสร็จ!"
+    read -n 1 -s -r -p "Press any key"
+    ssh ;;
 *) ssh ;;
 esac
