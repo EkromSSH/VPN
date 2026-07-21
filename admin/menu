@@ -205,10 +205,25 @@ case $menu in
 20)
     wget -q -O /usr/sbin/bbr5 "https://raw.githubusercontent.com/NevermoreSSH/BBRplus/main/bbr.sh" && chmod +x /usr/sbin/bbr5 && bbr5
     ;;
+
 21)
-    echo -e "🌐 เปิดเว็บ Panel: http://45.144.167.239:8888/"
+    echo -e "🌐 เปิดเว็บ Panel: http://$(curl -s ipv4.icanhazip.com):8888/"
     read -n 1 -s -r -p "Press any key to back on menu"
     menu
     ;;
-22)\n    echo "🔄 กำลังอัปเดตระบบทั้งหมด..."\n    GH="https://raw.githubusercontent.com/EkromSSH/VPN/main"\n    for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh change-port; do\n        wget -q -O /usr/sbin/$f "$GH/admin/$f" && chmod +x /usr/sbin/$f\n    done\n    wget -q -O /var/www/admin/index.php "$GH/admin/index.php"\n    wget -q -O /usr/local/bin/ssh-admin "$GH/admin/ssh-admin" && chmod +x /usr/local/bin/ssh-admin\n    echo "✅ อัปเดตระบบเสร็จสิ้น!"\n    read -n 1 -s -r -p "Press any key to back on menu"\n    menu\n    ;;
+22)
+    echo "🔄 กำลังอัปเดตระบบทั้งหมด..."
+    GH="https://raw.githubusercontent.com/EkromSSH/VPN/main"
+    for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh change-port; do
+        wget -q -O /usr/sbin/$f "$GH/admin/$f" && chmod +x /usr/sbin/$f
+    done
+    wget -q -O /var/www/admin/index.php "$GH/admin/index.php"
+    wget -q -O /usr/local/bin/ssh-admin "$GH/admin/ssh-admin" && chmod +x /usr/local/bin/ssh-admin
+    echo "✅ อัปเดตระบบเสร็จสิ้น!"
+    read -n 1 -s -r -p "Press any key to back on menu"
+    menu
+    ;;
+*)
+    menu
+    ;;
 esac
