@@ -42,6 +42,9 @@ apt install htop -y
 apt install vnstat -y 
 apt install resolvconf -y 
 
+# install UDP Custom (test)
+#wget https://raw.githubusercontent.com/NevermoreSSH/Vergil/main/Tunnel/udp.sh && bash udp.sh
+
 # download menu
 cd /usr/sbin
 wget -O add-ss "${REPO}add-ss"
@@ -56,11 +59,15 @@ wget -O del-vless "${REPO}del-vless"
 wget -O del-ws "${REPO}del-ws"
 wget -O menu "${REPO}menu"
 wget -O portin "${REPO}portin"
+#wget -O run "${REPO}run"
+#wget -O restart "${REPO}restart"
 wget -O trojan "${REPO}trojan"
 wget -O user-tr "${REPO}user-tr"
 wget -O user-vless "${REPO}user-vless"
 wget -O vless "${REPO}vless"
 wget -O xp "${REPO}xp"
+#wget -O get-domain "${REPO}get-domain"
+
 
 chmod +x add-ss
 chmod +x add-ssh
@@ -74,12 +81,14 @@ chmod +x del-vless
 chmod +x del-ws
 chmod +x menu
 chmod +x portin
+#chmod +x run
+#chmod +x restart
 chmod +x trojan
 chmod +x user-tr
 chmod +x user-vless
 chmod +x vless
 chmod +x xp
-
+#chmod +x get-domain
 cd
 sleep 2
 menu
