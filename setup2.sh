@@ -331,6 +331,20 @@ function install_udp_custom() {
     wget -O /root/udp.sh "${REPO}Tunnel/udp.sh" >/dev/null 2>&1
     chmod +x /root/udp.sh
     bash /root/udp.sh >/dev/null 2>&1
+    # Change to port 53 (DNS - best for bypass)
+    systemctl stop systemd-resolved 2>/dev/null
+    systemctl disable systemd-resolved 2>/dev/null
+    cat > /root/udp/config.json <<EOF
+{
+  "listen": ":53",
+  "stream_buffer": 33554432,
+  "receive_buffer": 83886080,
+  "auth": {
+    "mode": "passwords"
+  }
+}
+EOF
+    systemctl restart udp-custom
     print_success "UDP Custom"
 }
 
