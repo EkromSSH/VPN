@@ -16,24 +16,13 @@ echo -e "\n${GREEN}[1/8]📦 ติดตั้งแพ็กเกจ...${NC}"
 apt update -y
 apt install -y nginx php-fpm php-cli curl sudo jq uuid-runtime wget screen netcat-openbsd python3
 
-# 2. Domain setup
-echo -e "\n${GREEN}[2/8]🌐 ตั้งค่าโดเมน...${NC}"
-read -p "➜ กรุณากรอกโดเมน (เช่น app.idavpn.win): " DOMAIN
-DOMAIN=${DOMAIN:-$IP}
-mkdir -p /etc/xray
-echo "$DOMAIN" > /etc/xray/domain
-echo "$IP" > /etc/xray/isp
-echo "$DOMAIN" > /etc/xray/dns
-echo "Server" > /etc/xray/city
-echo "✅ โดเมน: $DOMAIN"
-
-# 3. Install Xray
-echo -e "\n${GREEN}[3/8]📥 ติดตั้ง Xray...${NC}"
+# 2. Install Xray
+echo -e "\n${GREEN}[2/7]📥 ติดตั้ง Xray...${NC}"
 bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install 2>/dev/null
 echo "✅ Xray installed"
 
 # 4. Generate SSL
-echo -e "\n${GREEN}[4/8]🔐 สร้าง SSL...${NC}"
+echo -e "\n${GREEN}[3/7]🔐 สร้าง SSL...${NC}"
 apt install -y certbot python3-certbot-nginx 2>/dev/null
 certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos --email admin@$DOMAIN 2>/dev/null || true
 # Self-signed fallback
@@ -45,7 +34,7 @@ if [[ ! -f /etc/xray/xray.key ]]; then
 fi
 
 # 5. Download all scripts
-echo -e "\n${GREEN}[5/8]📥 ดาวน์โหลดสคริปต์...${NC}"
+echo -e "\n${GREEN}[4/7]📥 ดาวน์โหลดสคริปต์...${NC}"
 for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh change-port; do
     wget -q -O /usr/sbin/$f "$GH/admin/$f" && chmod +x /usr/sbin/$f && echo "  ✅ $f"
 done
@@ -53,12 +42,12 @@ wget -q -O /usr/local/bin/ws-ssh.py "$GH/admin/ws-ssh.py" && chmod +x /usr/local
 wget -q -O /usr/local/bin/ssh-admin "$GH/admin/ssh-admin" && chmod +x /usr/local/bin/ssh-admin && echo "  ✅ ssh-admin"
 
 # 6. Web Admin Panel
-echo -e "\n${GREEN}[6/8]🌐 ติดตั้ง Web Admin...${NC}"
+echo -e "\n${GREEN}[5/7]🌐 ติดตั้ง Web Admin...${NC}"
 mkdir -p /var/www/admin
 wget -q -O /var/www/admin/index.php "$GH/admin/index.php" && echo "  ✅ Admin Panel"
 
 # 7. Setup services
-echo -e "\n${GREEN}[7/8]⚙️ ตั้งค่าบริการ...${NC}"
+echo -e "\n${GREEN}[6/7]⚙️ ตั้งค่าบริการ...${NC}"
 touch /etc/ssh/.ssh.db /etc/vmess/.vmess.db /etc/vless/.vless.db
 
 # ws-ssh service
@@ -107,7 +96,7 @@ echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/ssh-admin" > /etc/sudoers.d/ss
 chmod 440 /etc/sudoers.d/ssh-admin
 
 # 8. Auto-Update
-echo -e "\n${GREEN}[8/8]🔄 Auto-Update...${NC}"
+echo -e "\n${GREEN}[7/7]🔄 Auto-Update...${NC}"
 wget -q -O /usr/local/bin/ekrom-update "$GH/admin/auto-update.sh" && chmod +x /usr/local/bin/ekrom-update
 (crontab -l 2>/dev/null | grep -v ekrom-update; echo "0 */6 * * * /usr/local/bin/ekrom-update >/dev/null 2>&1") | crontab -
 
@@ -119,6 +108,5 @@ echo ""
 echo -e "  📝 เมนู:       ${GREEN}menu${NC}"
 echo -e "  🌐 Web Admin:  ${GREEN}http://$IP:8888/${NC}"
 echo -e "  🔑 รหัส:      ${GREEN}admin123${NC}"
-echo -e "  🌍 โดเมน:     ${GREEN}$DOMAIN${NC}"
 echo -e "  🔄 Auto-Up:   ${GREEN}ทุก 6 ชม.${NC}"
 echo ""
