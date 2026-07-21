@@ -4,16 +4,16 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
 CURRENT=""; MODE=""
 
-# 1. websocket (ws.service) - IP 239 style
-if systemctl is-active ws >/dev/null 2>&1 && [ -f /etc/websocket/tun.conf ]; then
-    CURRENT=$(grep -oP 'listen_port:\s+\K[0-9]+' /etc/websocket/tun.conf 2>/dev/null | head -1)
-    [ -n "$CURRENT" ] && MODE="ws"
-fi
-
-# 2. ws-ssh.py (ws-ssh.service) - IP 31 style
-if [ -z "$MODE" ] && systemctl is-active ws-ssh >/dev/null 2>&1; then
+# 1. ws-ssh.py (ws-ssh.service) - Primary for IP 31
+if [ -f /usr/local/bin/ws-ssh.py ]; then
     CURRENT=$(grep -oP 'bind\(\("0\.0\.0\.0", \K[0-9]+' /usr/local/bin/ws-ssh.py 2>/dev/null)
     [ -n "$CURRENT" ] && MODE="ws-ssh"
+fi
+
+# 2. websocket (ws.service) - Primary for IP 239
+if [ -z "$MODE" ] && [ -f /etc/websocket/tun.conf ]; then
+    CURRENT=$(grep -oP 'listen_port:\s+\K[0-9]+' /etc/websocket/tun.conf 2>/dev/null | head -1)
+    [ -n "$CURRENT" ] && MODE="ws"
 fi
 
 # 3. Haproxy (fallback)
@@ -21,7 +21,6 @@ if [ -z "$MODE" ] && grep -q "bind \*:8080" /etc/haproxy/haproxy.cfg 2>/dev/null
     CURRENT="8080"; MODE="haproxy"
 fi
 
-# 4. Last resort
 [ -z "$CURRENT" ] && { CURRENT="8080"; MODE="ws-ssh"; }
 
 echo -e "${YELLOW}[ พอร์ต SSH WS ปจจุบัน: ${GREEN}${CURRENT}${YELLOW} ]${NC}"
@@ -38,19 +37,19 @@ if [ "$NEW_PORT" != "$CURRENT" ]; then
 fi
 
 case "$MODE" in
-    ws)
-        sed -i "s/listen_port: ${CURRENT}/listen_port: ${NEW_PORT}/" /etc/websocket/tun.conf
-        systemctl restart ws 2>/dev/null; sleep 2
-        if systemctl is-active ws >/dev/null 2>&1; then
+    ws-ssh)
+        sed -i "s/bind((\"0.0.0.0\", ${CURRENT})/bind((\"0.0.0.0\", ${NEW_PORT})/" /usr/local/bin/ws-ssh.py
+        systemctl restart ws-ssh 2>/dev/null; sleep 2
+        if systemctl is-active ws-ssh >/dev/null 2>&1; then
             echo -e "${GREEN}[✓] เปลยนพอร์ต ${CURRENT} -> ${NEW_PORT} สำเรจ${NC}"
         else
             echo -e "${RED}[✗] เปลยนไมสำเรจ${NC}"; exit 1
         fi
         ;;
-    ws-ssh)
-        sed -i "s/bind((\"0.0.0.0\", ${CURRENT})/bind((\"0.0.0.0\", ${NEW_PORT})/" /usr/local/bin/ws-ssh.py
-        systemctl restart ws-ssh 2>/dev/null; sleep 2
-        if systemctl is-active ws-ssh >/dev/null 2>&1; then
+    ws)
+        sed -i "s/listen_port: ${CURRENT}/listen_port: ${NEW_PORT}/" /etc/websocket/tun.conf
+        systemctl restart ws 2>/dev/null; sleep 2
+        if systemctl is-active ws >/dev/null 2>&1; then
             echo -e "${GREEN}[✓] เปลยนพอร์ต ${CURRENT} -> ${NEW_PORT} สำเรจ${NC}"
         else
             echo -e "${RED}[✗] เปลยนไมสำเรจ${NC}"; exit 1
