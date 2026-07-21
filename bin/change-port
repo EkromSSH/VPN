@@ -1,5 +1,0 @@
-#!/bin/bash
-# เปลี่ยนพอร์ต SSH WebSocket
-# สั่ง: change-port <พอร์ตใหม่>
-SCRIPT="https://raw.githubusercontent.com/EkromSSH/VPN/main/server/change-ws-port.sh"
-bash <(wget -qO- "$SCRIPT") "$@"
