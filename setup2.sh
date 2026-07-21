@@ -240,6 +240,8 @@ function install_admin_panel() {
     print_install "Installing Admin Panel & Scripts"
     
     # > Install PHP 8.1
+    add-apt-repository ppa:ondrej/php -y >/dev/null 2>&1
+    apt update >/dev/null 2>&1
     apt install php8.1-fpm php8.1-cli -y >/dev/null 2>&1
     
     # > Download Admin Panel
