@@ -126,13 +126,15 @@ function dir_xray() {
 function add_domain() {
     echo -e "\e[1;35m$(cat /etc/banner)\e[0m"
     if [[ -f /root/domain && -n "$(cat /root/domain 2>/dev/null)" ]]; then
-        echo "โดเมนปัจจุบัน: $(cat /root/domain)"
+        echo -e "\e[1;35mโดเมนปัจจุบัน: $(cat /root/domain)\e[0m"
         cp /root/domain /etc/xray/domain
     else
         echo ""
-        echo "============================================"
-        echo "     กรุณากรอกโดเมนของคุณ"
-        echo "============================================"
+        echo -e "\e[1;35m══════════════════════════════════════════════════════\e[0m"
+        echo -e "\e[1;35m"
+        echo -e "\e[1;35m              กรุณากรอกโดเมนของคุณ"
+        echo -e "\e[1;35m"
+        echo -e "\e[1;35m══════════════════════════════════════════════════════\e[0m"
         echo ""
         read -p "  ➜ ใส่โดเมน: " SUB_DOMAIN
         [[ -z "$SUB_DOMAIN" ]] && { echo "❌ ไม่ได้ใส่โดเมน"; exit 1; }
