@@ -1,0 +1,14 @@
+[Unit]
+Description=SSH WebSocket Handler
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/ws-ssh.py
+Restart=always
+RestartSec=3
+LimitNOFILE=100000
+LimitNPROC=10000
+
+[Install]
+WantedBy=multi-user.target
