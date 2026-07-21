@@ -113,6 +113,7 @@ function dir_xray() {
     # mkdir -p /usr/sbin/xray/
     mkdir -p /var/log/xray/
     mkdir -p /var/www/html/
+    mkdir -p /var/www/admin/
     mkdir -p /etc/nevermoressh/
 #    chmod +x /var/log/xray
     touch /var/log/xray/{access.log,error.log}
@@ -232,6 +233,75 @@ function pasang_rclone() {
     print_success "Installing Rclone"
     curl "${REPO}bin/rclone" | bash >/dev/null 2>&1
     print_success "Rclone"
+}
+
+### Install Admin Panel + Scripts
+function install_admin_panel() {
+    print_install "Installing Admin Panel & Scripts"
+    
+    # > Install PHP 8.1
+    apt install php8.1-fpm php8.1-cli -y >/dev/null 2>&1
+    
+    # > Download Admin Panel
+    wget -O /var/www/admin/index.php "${REPO}admin/index.php" >/dev/null 2>&1
+    chmod +x /var/www/admin/index.php
+    
+    # > Download Admin Scripts
+    wget -O /usr/local/bin/ssh-admin "${REPO}admin/ssh-admin" >/dev/null 2>&1
+    chmod +x /usr/local/bin/ssh-admin
+    wget -O /usr/local/bin/xray-admin "${REPO}admin/xray-admin" >/dev/null 2>&1
+    chmod +x /usr/local/bin/xray-admin
+    wget -O /usr/local/bin/ws-ssh.py "${REPO}ws/ws-ssh.py" >/dev/null 2>&1
+    chmod +x /usr/local/bin/ws-ssh.py
+    wget -O /usr/local/bin/change-port-web "${REPO}ws/change-port-web.sh" >/dev/null 2>&1
+    chmod +x /usr/local/bin/change-port-web
+    wget -O /usr/local/bin/ekrom-update "${REPO}ws/ekrom-update.sh" >/dev/null 2>&1
+    chmod +x /usr/local/bin/ekrom-update
+    
+    # > Download Nginx Admin Configs
+    wget -O /etc/nginx/conf.d/admin.conf "${REPO}config/admin.conf" >/dev/null 2>&1
+    wget -O /etc/nginx/conf.d/admin-redirect.conf "${REPO}config/admin-redirect.conf" >/dev/null 2>&1
+    
+    # > Setup sudoers for www-data (admin panel user management)
+    echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/ssh-admin" > /etc/sudoers.d/admin-panel
+    echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/xray-admin" >> /etc/sudoers.d/admin-panel
+    chmod 440 /etc/sudoers.d/admin-panel
+    
+    # > Create ws-ssh systemd service
+    cat >/etc/systemd/system/ws-ssh.service <<EOF
+[Unit]
+Description=SSH WebSocket Handler
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/ws-ssh.py
+Restart=always
+RestartSec=3
+LimitNOFILE=100000
+LimitNPROC=10000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # > Auto-update cron every 6 hours
+    cat >/etc/cron.d/ekrom-update <<EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+0 */6 * * * root /usr/local/bin/ekrom-update >/dev/null 2>&1
+EOF
+
+    print_success "Admin Panel & Scripts"
+}
+
+### Install UDP Custom
+function install_udp_custom() {
+    print_install "Installing UDP Custom (NevermoreSSH)"
+    wget -O /root/udp.sh "${REPO}Tunnel/udp.sh" >/dev/null 2>&1
+    chmod +x /root/udp.sh
+    bash /root/udp.sh >/dev/null 2>&1
+    print_success "UDP Custom"
 }
 
 ### Take Config
@@ -423,6 +493,8 @@ function enable_services(){
     systemctl enable --now client
     systemctl enable --now server
     systemctl enable --now fail2ban
+    systemctl enable --now ws-ssh
+    systemctl enable --now udp-custom
     wget -O /root/.config/rclone/rclone.conf "${REPO}rclone/rclone.conf" >/dev/null 2>&1
 }
 
@@ -435,6 +507,8 @@ function install_all() {
     install_ovpn >> /root/install.log
     install_slowdns >> /root/install.log
     download_config >> /root/install.log
+    install_admin_panel >> /root/install.log
+    install_udp_custom >> /root/install.log
     enable_services >> /root/install.log
     tambahan >> /root/install.log
     pasang_rclone >> /root/install.log
