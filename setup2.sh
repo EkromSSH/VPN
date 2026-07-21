@@ -341,9 +341,11 @@ function download_config(){
     wget -O /etc/nginx/conf.d/xray.conf "${REPO}config/xray.conf" >/dev/null 2>&1
     sed -i "s/xxx/${domain}/g" /etc/nginx/conf.d/xray.conf
     wget -O /etc/nginx/nginx.conf "${REPO}config/nginx.conf" >/dev/null 2>&1
+    mkdir -p /etc/squid
     wget -q -O /etc/squid/squid.conf "${REPO}config/squid.conf" >/dev/null 2>&1
-    echo "visible_hostname $(cat /etc/xray/domain)" /etc/squid/squid.conf
+    echo "visible_hostname $(cat /etc/xray/domain)" >> /etc/squid/squid.conf
     mkdir -p /var/log/squid/cache/
+    chown -R proxy:proxy /var/log/squid/ 2>/dev/null
     chmod 777 /var/log/squid/cache/
     echo "* - nofile 65535" >> /etc/security/limits.conf
     mkdir -p /etc/sysconfig/
