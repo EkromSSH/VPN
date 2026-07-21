@@ -125,7 +125,7 @@ function dir_xray() {
 ### Add domain
 function add_domain() {
     echo "`cat /etc/banner`"
-    read -rp "Input Your Domain For This Server :" -e SUB_DOMAIN
+    read -rp "Input Your Domain For This Server : " SUB_DOMAIN
     echo "Host : $SUB_DOMAIN"
     echo $SUB_DOMAIN > /root/domain
     cp /root/domain /etc/xray/domain
