@@ -124,7 +124,7 @@ function dir_xray() {
 
 ### Add domain
 function add_domain() {
-    echo -e "$(cat /etc/banner)"
+    echo -e "\033[1;35m$(cat /etc/banner)\033[0m"
     if [[ -f /root/domain && -n "$(cat /root/domain 2>/dev/null)" ]]; then
         echo "โดเมนปัจจุบัน: $(cat /root/domain)"
         cp /root/domain /etc/xray/domain
