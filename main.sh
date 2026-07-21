@@ -297,6 +297,37 @@ EOF
 
 chmod 644 /root/.profile
 
+    # Create haproxy error pages
+    mkdir -p /etc/haproxy/errors
+    for code in 400 403 404 405 408 410 411 413 414 417 429 500 501 502 503 504; do
+        case $code in
+            400) msg="Bad Request" ;;
+            403) msg="Forbidden" ;;
+            404) msg="Not Found" ;;
+            405) msg="Method Not Allowed" ;;
+            408) msg="Request Timeout" ;;
+            410) msg="Gone" ;;
+            411) msg="Length Required" ;;
+            413) msg="Payload Too Large" ;;
+            414) msg="URI Too Long" ;;
+            417) msg="Expectation Failed" ;;
+            429) msg="Too Many Requests" ;;
+            500) msg="Internal Server Error" ;;
+            501) msg="Not Implemented" ;;
+            502) msg="Bad Gateway" ;;
+            503) msg="Service Unavailable" ;;
+            504) msg="Gateway Timeout" ;;
+        esac
+        printf "HTTP/1.0 %d %s\\r\\n" $code "$msg" > /etc/haproxy/errors/${code}.http
+        printf "Cache-Control: no-cache\\r\\n" >> /etc/haproxy/errors/${code}.http
+        printf "Connection: close\\r\\n" >> /etc/haproxy/errors/${code}.http
+        printf "Content-Type: text/html\\r\\n" >> /etc/haproxy/errors/${code}.http
+        printf "\\r\\n" >> /etc/haproxy/errors/${code}.http
+        printf "<html><body><h1>%d %s</h1></body></html>\\n" $code "$msg" >> /etc/haproxy/errors/${code}.http
+    done
+
+    cat /etc/xray/xray.crt /etc/xray/xray.key > /etc/haproxy/xray.pem 2>/dev/null
+
 cat >/etc/cron.d/daily_reboot <<EOF
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
