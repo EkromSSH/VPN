@@ -18,4 +18,11 @@ case "$1" in
         echo "$2:$3" | /usr/sbin/chpasswd 2>/dev/null
         echo "OK"
         ;;
+    renew)
+        /usr/sbin/usermod -e $(date -d "+$3 days" +%Y-%m-%d) "$2" 2>/dev/null
+        EXP_TS=$(date -d "+$3 days" +%s)
+        sed -i "/^### $2 /d" /etc/ssh/.ssh.db 2>/dev/null
+        echo "### $2 $EXP_TS" >> /etc/ssh/.ssh.db
+        echo "OK"
+        ;;
 esac
