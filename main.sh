@@ -285,6 +285,28 @@ function download_config(){
     wget -q -O /usr/local/bin/ssh-admin "${REPO}admin/ssh-admin" 2>/dev/null
     chmod +x /usr/local/bin/ssh-admin
 
+    # > Download quota monitor (GB limit + IP limit)
+    wget -q -O /usr/sbin/ssh-quota-monitor "${REPO}admin/ssh-quota-monitor" 2>/dev/null
+    chmod +x /usr/sbin/ssh-quota-monitor
+    # Cron: ตรวจสอบโควต้า GB + ลิมิต IP ทุก 5 นาที
+    (crontab -l 2>/dev/null | grep -v ssh-quota-monitor; echo "*/5 * * * * /usr/sbin/ssh-quota-monitor >/dev/null 2>&1") | crontab -
+
+    # > Telegram config template (ผู้ใช้แก้ KEY/CHATID ของตัวเอง)
+    if [ ! -f /etc/ssh/telegram.conf ]; then
+        cat > /etc/ssh/telegram.conf <<'EOF'
+# ใส่ KEY และ CHATID ของบอท Telegram คุณเอง
+# สร้างบอทที่ @BotFather แล้ววาง KEY ตรงนี้
+KEY=""
+CHATID=""
+EOF
+        chmod 600 /etc/ssh/telegram.conf
+    fi
+
+    # > nginx: ป้องกัน Too many open files
+    if [ -f /etc/nginx/nginx.conf ] && ! grep -q 'worker_rlimit_nofile' /etc/nginx/nginx.conf; then
+        sed -i 's/^worker_processes.*/worker_processes auto;\nworker_rlimit_nofile 65535;/' /etc/nginx/nginx.conf
+    fi
+
 
     cat >/root/.profile <<EOF
 # ~/.profile: executed by Bourne-compatible login shells.

@@ -1,17 +1,52 @@
 #!/bin/bash
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+# ── ฟังก์ชัน quota (iptables จำกัด GB ต่อ user) ──
+del_quota_rules() {
+  local uid_num="$1"
+  [ -z "$uid_num" ] && return 0
+  local nums
+  nums=$(iptables -L OUTPUT -n --line-numbers 2>/dev/null | grep "owner UID match $uid_num" | awk '{print $1}' | sort -rn)
+  for n in $nums; do
+    iptables -D OUTPUT "$n" 2>/dev/null
+  done
+}
+
+set_quota() {
+  local u="$1" gb="$2"
+  [ -z "$gb" ] && gb=0
+  [ "$gb" -eq 0 ] 2>/dev/null && return 0
+  local uid_num=$(id -u "$u")
+  local bytes=$((gb * 1024 * 1024 * 1024))
+  del_quota_rules "$uid_num"
+  iptables -I OUTPUT -m owner --uid-owner "$uid_num" -m quota --quota "$bytes" -j ACCEPT
+  iptables -I OUTPUT -m owner --uid-owner "$uid_num" -j REJECT
+}
+
 case "$1" in
     create)
+        # create <user> <pass> <days> [gb] [maxip]
         /usr/sbin/useradd -m -s /bin/sh "$2" 2>/dev/null
         echo "$2:$3" | /usr/sbin/chpasswd 2>/dev/null
         EXP_TS=$(date -d "+$4 days" +%s)
         /usr/sbin/chage -E $(date -d "+$4 days" +%Y-%m-%d) "$2" 2>/dev/null
-        echo "### $2 $EXP_TS" >> /etc/ssh/.ssh.db
+        sed -i "/^### $2 /d" /etc/ssh/.ssh.db 2>/dev/null
+        echo "### $2 $EXP_TS ${5:-0} ${6:-0}" >> /etc/ssh/.ssh.db
+        if [ -n "$5" ] && [ "$5" != "0" ]; then
+            set_quota "$2" "$5"
+        else
+            del_quota_rules "$(id -u "$2" 2>/dev/null)"
+        fi
         echo "OK"
         ;;
     delete)
+        UID_NUM=$(id -u "$2" 2>/dev/null)
+        if [ -n "$UID_NUM" ]; then
+            del_quota_rules "$UID_NUM"
+        fi
+        pkill -u "$2" 2>/dev/null
         /usr/sbin/userdel -r "$2" 2>/dev/null
-        sed -i "/### $2/d" /etc/ssh/.ssh.db 2>/dev/null
+        sed -i "/^### $2 /d" /etc/ssh/.ssh.db 2>/dev/null
         echo "OK"
         ;;
     passwd)
@@ -19,10 +54,22 @@ case "$1" in
         echo "OK"
         ;;
     renew)
+        # renew <user> <days> [gb] [maxip] — -1 หรือไม่ระบุ = ใช้ค่าเดิมจาก db
+        OLD_GB=$(grep "^### $2 " /etc/ssh/.ssh.db 2>/dev/null | awk '{print $4}')
+        OLD_IP=$(grep "^### $2 " /etc/ssh/.ssh.db 2>/dev/null | awk '{print $5}')
+        [ -z "$OLD_GB" ] && OLD_GB=0
+        [ -z "$OLD_IP" ] && OLD_IP=0
+        NEW_GB="${4:-$OLD_GB}"; [ "$NEW_GB" = "-1" ] && NEW_GB="$OLD_GB"
+        NEW_IP="${5:-$OLD_IP}"; [ "$NEW_IP" = "-1" ] && NEW_IP="$OLD_IP"
         /usr/sbin/usermod -e $(date -d "+$3 days" +%Y-%m-%d) "$2" 2>/dev/null
         EXP_TS=$(date -d "+$3 days" +%s)
         sed -i "/^### $2 /d" /etc/ssh/.ssh.db 2>/dev/null
-        echo "### $2 $EXP_TS" >> /etc/ssh/.ssh.db
+        echo "### $2 $EXP_TS $NEW_GB $NEW_IP" >> /etc/ssh/.ssh.db
+        if [ -n "$NEW_GB" ] && [ "$NEW_GB" != "0" ]; then
+            set_quota "$2" "$NEW_GB"
+        else
+            del_quota_rules "$(id -u "$2" 2>/dev/null)"
+        fi
         echo "OK"
         ;;
 esac

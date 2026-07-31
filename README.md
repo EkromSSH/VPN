@@ -36,6 +36,20 @@ The solution simple install: `apt-get install ca-certificates`
 - Xray Core by @dharak36
 - Added fail2ban
 
+### 🆕 QUOTA FEATURES (กำหนด GB + ลิมิต IP)
+ระบบใหม่สำหรับการจำกัดการใช้งานบัญชี SSH:
+- **กำหนด GB** — ตั้งโควต้าข้อมูลต่อบัญชี (iptables quota) เช่น `สร้างบัญชี → กำหนด GB: 5` = ใช้ได้ 5GB แล้วถูกตัดอัตโนมัติ
+- **ลิมิต IP** — จำกัดจำนวนเครื่องที่ login พร้อมกัน เช่น `ลิมิต IP: 1` = ใช้ได้เครื่องเดียว
+- **อัตโนมัติ** — cron ตรวจทุก 5 นาที: ครบ GB / เกิน IP → kill session ทันที
+- **Web Panel** — ฟอร์มสร้างบัญชีมีช่อง `กำหนด GB` + `ลิมิต IP` (พอร์ต 8888)
+
+ตั้งค่า Telegram Bot (ถ้าต้องการให้แจ้งเตือนบัญชีใหม่):
+```bash
+nano /etc/ssh/telegram.conf
+# KEY="<token จาก @BotFather>"
+# CHATID="<id แชท/กลุ่ม>"
+```
+
 ### PORT INFO
 ```
 >>> Service & Port

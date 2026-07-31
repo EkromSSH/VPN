@@ -1,0 +1,56 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════════════
+#  ssh-quota-monitor — ตรวจสอบโควต้า GB + ลิมิต IP ของ user SSH
+#  ทำงานทุก 5 นาทีผ่าน cron
+#  - ถ้า user ใช้ GB ครบ → kill session ทั้งหมด
+#  - ถ้า user login เกินจำนวน IP ที่กำหนด → kill session ส่วนเกิน
+# ═══════════════════════════════════════════════════════════
+DB=/etc/ssh/.ssh.db
+LOG=/etc/nevermoressh/quota.log
+[ -f "$DB" ] || exit 0
+
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
+
+# อ่านฐานข้อมูล: ### user expiry_ts gb maxip
+while read -r _ USER EXP_TS GB MAXIP; do
+  [ -z "$USER" ] && continue
+  # user ยังมีอยู่ในระบบไหม?
+  id "$USER" &>/dev/null || continue
+
+  # ── เช็คโควต้า GB (จาก iptables quota counter) ──
+  if [ -n "$GB" ] && [ "$GB" -gt 0 ] 2>/dev/null; then
+    UID_NUM=$(id -u "$USER")
+    QUOTA_BYTES=$((GB * 1024 * 1024 * 1024))
+    # bytes ที่ผ่าน quota rule ไปแล้ว (จาก counter)
+    USED=$(iptables -L OUTPUT -v -x -n 2>/dev/null | awk -v u="$UID_NUM" '$0 ~ "owner UID match "u && /quota/ {print $2; exit}')
+    USED=${USED:-0}
+    if [ "$USED" -ge "$QUOTA_BYTES" ]; then
+      log "⛔ $USER ใช้ครบ ${GB}GB แล้ว (${USED} bytes) — kill session"
+      pkill -u "$USER" 2>/dev/null
+      # ปิด rule REJECT ชั่วคราว? ไม่ — ปล่อยให้ REJECT ต่อไป (user หมดสิทธิ์)
+      continue
+    fi
+  fi
+
+  # ── เช็คลิมิต IP (จำนวนเครื่องที่ login พร้อมกัน) ──
+  if [ -n "$MAXIP" ] && [ "$MAXIP" -gt 0 ] 2>/dev/null; then
+    # หา IP ของทุก session ที่เป็นของ user (sshd/dropbear)
+    IPS=""
+    for pid in $(pgrep -u "$USER" 2>/dev/null); do
+      # ดึง peer IP จาก ss
+      PEER=$(ss -tnp 2>/dev/null | grep "pid=$pid," | head -1 | awk '{print $5}' | cut -d: -f1)
+      # dropbear/sshd process อาจไม่ match ชื่อ → fallback ใช้ทุก connection ของ pid
+      if [ -z "$PEER" ]; then
+        PEER=$(ss -tnp 2>/dev/null | grep "pid=$pid" | head -1 | awk '{print $5}' | cut -d: -f1)
+      fi
+      [ -n "$PEER" ] && IPS="$IPS $PEER"
+    done
+    UNIQUE_IPS=$(echo $IPS | tr ' ' '\n' | grep -v '^$' | sort -u | wc -l)
+    if [ "$UNIQUE_IPS" -gt "$MAXIP" ]; then
+      log "🚫 $USER login เกินลิมิต (${UNIQUE_IPS} IP > $MAXIP) — kill session ทั้งหมด"
+      pkill -u "$USER" 2>/dev/null
+    fi
+  fi
+done < "$DB"
+
+exit 0
