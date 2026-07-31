@@ -396,6 +396,27 @@ function download_config(){
     chmod +x /tmp/menu/*
     mv /tmp/menu/* /usr/sbin/
 
+    # > Download custom EkromSSH scripts (เวอร์ชันล่าสุดจาก admin/)
+    for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh seres vmess vless trojan shadowsocks run; do
+        wget -q -O /usr/sbin/$f "${REPO}admin/$f" 2>/dev/null
+        chmod +x /usr/sbin/$f
+    done
+
+    # > Download quota monitor (GB limit + IP limit)
+    wget -q -O /usr/sbin/ssh-quota-monitor "${REPO}admin/ssh-quota-monitor" 2>/dev/null
+    chmod +x /usr/sbin/ssh-quota-monitor
+    (crontab -l 2>/dev/null | grep -v ssh-quota-monitor; echo "*/5 * * * * /usr/sbin/ssh-quota-monitor >/dev/null 2>&1") | crontab -
+
+    # > Telegram config template
+    if [ ! -f /etc/ssh/telegram.conf ]; then
+        cat > /etc/ssh/telegram.conf <<'EOF'
+# ใส่ KEY และ CHATID ของบอท Telegram คุณเอง
+KEY=""
+CHATID=""
+EOF
+        chmod 600 /etc/ssh/telegram.conf
+    fi
+
 
     cat >/root/.profile <<EOF
 # ~/.profile: executed by Bourne-compatible login shells.

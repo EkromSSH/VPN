@@ -278,7 +278,7 @@ function download_config(){
     mv /tmp/menu/* /usr/sbin/
 
     # Download custom EkromSSH scripts
-    for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh change-port; do
+    for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh change-port seres vmess vless trojan shadowsocks run; do
         wget -q -O /usr/sbin/$f "${REPO}admin/$f" 2>/dev/null
         chmod +x /usr/sbin/$f
     done
