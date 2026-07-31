@@ -97,7 +97,7 @@ function base_package() {
     curl socat xz-utils wget apt-transport-https dnsutils socat \
     tar wget curl ruby zip unzip p7zip-full python3-pip haproxy libc6  \
     msmtp-mta ca-certificates bsd-mailx iptables iptables-persistent netfilter-persistent \
-    net-tools  jq openvpn easy-rsa python3-certbot-nginx p7zip-full tuned fail2ban -y
+    net-tools  jq openvpn easy-rsa python3-certbot-nginx p7zip-full tuned fail2ban vnstat -y
     apt-get clean all; sudo apt-get autoremove -y
     print_ok "Successfully installed the required package"
 }
