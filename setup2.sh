@@ -374,6 +374,8 @@ function download_config(){
     print_install "Install configuration package configuration"
     wget -O /etc/haproxy/haproxy.cfg "${REPO}config/haproxy.cfg" >/dev/null 2>&1
     wget -O /etc/nginx/conf.d/xray.conf "${REPO}config/xray.conf" >/dev/null 2>&1
+    # SSH WS SSL (443) — แยกจาก Xray (ย้าย Xray ไป 4443)
+    wget -O /etc/nginx/conf.d/ssh-ws-ssl.conf "${REPO}config/ssh-ws-ssl.conf" >/dev/null 2>&1
     sed -i "s/xxx/${domain}/g" /etc/nginx/conf.d/xray.conf
     wget -O /etc/nginx/nginx.conf "${REPO}config/nginx.conf" >/dev/null 2>&1
     mkdir -p /etc/squid
