@@ -26,7 +26,7 @@ if($page==="api_online"){
  header("Content-Type: application/json");echo json_encode(["total"=>$t,"online"=>count($ol2),"users"=>$ol2]);exit;
 }
 if(($_POST["action"]??$_GET["action"]??null)!=null){
- $a=$_POST["action"]??$_GET["action"]??"";$u=escapeshellcmd($_POST["username"]??$_GET["user"]??"");
+ $a=$_POST["action"]??$_GET["action"]??"";$u=escapeshellcmd($_POST["username"]??$_GET["user"]??"");$p=escapeshellcmd($_GET["pass"]??$_POST["pass"]??"");
  if($a==="create"&&$u){$p=escapeshellcmd($_GET["pass"]??"");$d=intval($_GET["days"]?:30);$g=intval($_GET["gb"]??0);$mip=intval($_GET["ip"]??0);exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin create $u $p $d $g $mip 2>/dev/null",$o,$c);$msg=$c===0?"ok_$u":"fail";}
  elseif(($a==="delete"||$a==="del")&&$u){exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin delete $u 2>/dev/null",$o,$c);$msg=$c===0?"del_$u":"nf";}
  elseif($a==="passwd"&&$u){$p=escapeshellcmd($_GET["pass"]??"");exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin passwd $u $p 2>/dev/null",$o,$c);$msg=$c===0?"pw_$u":"pf";}
