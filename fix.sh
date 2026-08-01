@@ -64,6 +64,12 @@ else
 fi
 
 # ── 5. แก้ nginx Too many open files ──
+# ให้ www-data restart ws.service ได้ (เปลี่ยนพอร์ตผ่านเว็บ)
+if [ -f /etc/websocket/tun.conf ] && ! grep -q ws-panel /etc/sudoers.d/ws-panel 2>/dev/null; then
+    echo "www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ws" > /etc/sudoers.d/ws-panel
+    chmod 440 /etc/sudoers.d/ws-panel
+    ok "เพิ่มสิทธิ์เปลี่ยนพอร์ตผ่านเว็บแล้ว"
+fi
 info "ตรวจสอบ nginx..."
 if [ -f /etc/nginx/nginx.conf ] && ! grep -q 'worker_rlimit_nofile' /etc/nginx/nginx.conf; then
     sed -i 's/^worker_processes.*/worker_processes auto;\nworker_rlimit_nofile 65535;/' /etc/nginx/nginx.conf
