@@ -391,10 +391,21 @@ function download_config(){
     
     # > Add menu, thanks to NevermoreSSH <3
     wget -O /tmp/menu-master.zip "${REPO}config/menu.zip" >/dev/null 2>&1
-    mkdir /tmp/menu
-    7z e  /tmp/menu-master.zip -o/tmp/menu/ >/dev/null 2>&1
-    chmod +x /tmp/menu/*
-    mv /tmp/menu/* /usr/sbin/
+    mkdir -p /tmp/menu
+    if command -v 7z >/dev/null 2>&1; then
+        7z e /tmp/menu-master.zip -o/tmp/menu/ >/dev/null 2>&1
+    else
+        unzip -o /tmp/menu-master.zip -d /tmp/menu/ >/dev/null 2>&1 || apt-get install -y unzip >/dev/null 2>&1 && unzip -o /tmp/menu-master.zip -d /tmp/menu/ >/dev/null 2>&1
+    fi
+    chmod +x /tmp/menu/* 2>/dev/null
+    mv /tmp/menu/* /usr/sbin/ 2>/dev/null
+
+    # > ตรวจสอบ vnstat (เมนูใช้แสดงปริมาณการใช้งาน) — ติดตั้งแยกเผื่อ apt fail
+    if ! command -v vnstat >/dev/null 2>&1; then
+        apt-get install -y vnstat >/dev/null 2>&1
+    fi
+    systemctl enable vnstat >/dev/null 2>&1
+    systemctl start vnstat >/dev/null 2>&1
 
     # > Download custom EkromSSH scripts (เวอร์ชันล่าสุดจาก admin/)
     for f in menu ssh add-ssh del-ssh renew-ssh cek-ssh seres vmess vless trojan shadowsocks run; do
