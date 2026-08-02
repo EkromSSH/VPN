@@ -36,12 +36,13 @@ WS_INT=$(grep -oP 'listen_port:\s*\K[0-9]+' "$TUN_CFG" 2>/dev/null | head -1)
 [ -z "$WS_PUB" ] && WS_PUB=80
 [ -z "$WS_INT" ] && WS_INT=8080
 
-# Xray port (443 → ย้ายเป็น 4443 ถ้ามี ssh-ws-ssl.conf)
+# Xray port (443 = TLS ผ่าน nginx, 80 = None TLS ผ่าน haproxy→xray)
 XRAY_PORT=$(grep -oP 'listen \K[0-9]+(?= ssl http2)' /etc/nginx/conf.d/xray.conf 2>/dev/null | head -1)
-[ -z "$XRAY_PORT" ] && XRAY_PORT=4443
-# SSH WS SSL (443 ถ้ามี config)
+[ -z "$XRAY_PORT" ] && XRAY_PORT=443
+# SSH WS SSL (443 — path /ssh-ws)
 WS_SSL=443
-[ -f /etc/nginx/conf.d/ssh-ws-ssl.conf ] && WS_SSL=443 || WS_SSL="-"
+# Xray None TLS (80 — path /vmess /vless ผ่าน haproxy → xray 10009)
+XRAY_NONETLS=80
 
 PORT_SSH=22
 PORT_DROPBEAR=$(ss -tlnp 2>/dev/null | grep dropbear | grep -oE ':[0-9]+ ' | grep -oE '[0-9]+' | sort -u | tr '\n' ',' | sed 's/,$//')
@@ -68,6 +69,7 @@ echo -e "${Y}│${NC} $(pad_col 'SSH Websocket (public)' 30)${G}$(pad_col "$WS_P
 echo -e "${Y}│${NC} $(pad_col 'SSH Websocket SSL' 30)${G}$(pad_col "$WS_SSL" 14)${NC} ${Y}│${NC}"
 echo -e "${Y}│${NC} $(pad_col 'SSH WS Internal' 30)${C}$(pad_col "$WS_INT" 14)${NC} ${Y}│${NC}"
 echo -e "${Y}│${NC} $(pad_col 'Xray (VMESS/VLESS/TROJAN/SS)' 30)$(pad_col "$XRAY_PORT" 14) ${Y}│${NC}"
+echo -e "${Y}│${NC} $(pad_col 'Xray None TLS (VMESS/VLESS)' 30)$(pad_col "$XRAY_NONETLS" 14) ${Y}│${NC}"
 echo -e "${Y}│${NC} $(pad_col 'Open SSH' 30)$(pad_col "$PORT_SSH" 14) ${Y}│${NC}"
 echo -e "${Y}│${NC} $(pad_col 'Dropbear' 30)$(pad_col "$PORT_DROPBEAR" 14) ${Y}│${NC}"
 echo -e "${Y}│${NC} $(pad_col 'OpenVPN TCP' 30)$(pad_col '443, 1194' 14) ${Y}│${NC}"

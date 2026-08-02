@@ -180,7 +180,30 @@
            "serviceName": "ss-grpc"
           }
        }
-    }
+    },
+   {
+     "listen": "127.0.0.1",
+     "port": "10009",
+     "protocol": "vless",
+      "settings": {
+          "decryption":"none",
+            "clients": [
+               {
+                 "id": "36326ea2-6994-4d53-bcd5-f43bbdaec562"
+               }
+            ],
+            "fallbacks": [
+              {"path": "/vmess", "dest": 10002},
+              {"dest": 8081}
+            ]
+       },
+       "streamSettings":{
+         "network": "ws",
+            "wsSettings": {
+                "path": "/vless"
+          }
+        }
+     }
   ],
   "outbounds": [
     {
