@@ -180,11 +180,13 @@ function install_xray(){
     curl -s ipinfo.io/city >> /etc/xray/city
     curl -s ipinfo.io/org | cut -d " " -f 2-10 >> /etc/xray/isp
     xray_latest="$(curl -s https://api.github.com/repos/dharak36/Xray-core/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
-    xraycore_link="https://github.com/EkromSSH/Xcore-custompath/releases/download/Xray-linux-64-v1.6.5.1/Xray-linux-64-v1.6.5.1"
-    curl -sL "$xraycore_link" -o xray
-#    unzip -q xray.zip && rm -rf xray.zip
-    mv xray /usr/sbin/xray
-#    mv xray /usr/local/bin/xray
+    # ดาวน์โหลดจาก repo ตรง (กันลิงก์เก่า 404 → ไฟล์ 9 bytes)
+    wget -O /usr/sbin/xray "${REPO}bin/xray" >/dev/null 2>&1
+    if [ ! -s /usr/sbin/xray ] || [ "$(stat -c%s /usr/sbin/xray 2>/dev/null)" -lt 1000000 ]; then
+        curl -sL "https://github.com/EkromSSH/Xcore-custompath/releases/download/Xray-linux-64-v1.6.5.1/Xray-linux-64-v1.6.5.1" -o xray 2>/dev/null
+        [ -s xray ] && mv xray /usr/sbin/xray
+    fi
+    chmod +x /usr/sbin/xray 2>/dev/null
     print_success "Xray Core"
     
     cat /etc/xray/xray.crt /etc/xray/xray.key | tee /etc/haproxy/xray.pem
@@ -384,8 +386,6 @@ function download_config(){
     print_install "Install configuration package configuration"
     wget -O /etc/haproxy/haproxy.cfg "${REPO}config/haproxy.cfg" >/dev/null 2>&1
     wget -O /etc/nginx/conf.d/xray.conf "${REPO}config/xray.conf" >/dev/null 2>&1
-    # SSH WS SSL (443) — แยกจาก Xray (ย้าย Xray ไป 4443)
-    wget -O /etc/nginx/conf.d/ssh-ws-ssl.conf "${REPO}config/ssh-ws-ssl.conf" >/dev/null 2>&1
     # SSH WS + Xray None TLS (80) — path-based
     wget -O /etc/nginx/conf.d/ssh-ws-80.conf "${REPO}config/ssh-ws-80.conf" >/dev/null 2>&1
     chmod 644 /etc/nginx/conf.d/ssh-ws-80.conf 2>/dev/null
