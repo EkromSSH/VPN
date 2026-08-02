@@ -320,6 +320,13 @@ ReadWritePaths=/etc /home /var/log /var/mail
 EOF
     systemctl daemon-reload 2>/dev/null
     systemctl restart php${PHP_VER}-fpm 2>/dev/null
+
+    # > กัน nginx + squid โดน OOM-kill (RAM น้อย) — restart อัตโนมัติ
+    mkdir -p /etc/systemd/system/nginx.service.d /etc/systemd/system/squid.service.d
+    printf '[Service]\nRestart=on-failure\nRestartSec=3\nOOMScoreAdjust=-500\n' > /etc/systemd/system/nginx.service.d/override.conf
+    printf '[Service]\nRestart=on-failure\nRestartSec=3\nOOMScoreAdjust=-500\n' > /etc/systemd/system/squid.service.d/override.conf
+    systemctl daemon-reload 2>/dev/null
+    systemctl restart nginx squid 2>/dev/null
     
     # > Create ws-ssh systemd service
     cat >/etc/systemd/system/ws-ssh.service <<EOF
