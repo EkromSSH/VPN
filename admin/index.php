@@ -36,7 +36,7 @@ if(($_POST["action"]??$_GET["action"]??null)!=null){
 }
 $ip=trim(exec("curl -s ipv4.icanhazip.com")??"");$domain=trim(@file_get_contents("/etc/xray/domain")??"");
 $ram_t=trim(exec("free -h|grep Mem|awk '{print $2}'")??"");$ram_u=trim(exec("free -h|grep Mem|awk '{print $3}'")??"");
-$uptime=trim(exec("uptime -p|cut -d' ' -f2-")??"");$port="8080";
+$uptime=trim(exec("uptime -p|cut -d' ' -f2-")??"");$port=trim(exec("grep -oP 'listen \K[0-9]+(?=;)' /etc/nginx/conf.d/ssh-ws-80.conf 2>/dev/null|head -1")??"");if(!$port)$port="80";
 $users=[];if(file_exists("/etc/ssh/.ssh.db")){foreach(file("/etc/ssh/.ssh.db") as$l){if(preg_match("/^### (\w+)/",$l,$m))$users[]=trim($m[1]);}}
 $ol=[];exec("ps aux|grep 'sshd:'|grep -v 'listener\\|grep\\|root'|awk '{print $1}'|grep -v '^root$'|grep -v '^sshd$'|sort -u",$ol);
 ?>
@@ -110,8 +110,8 @@ if(file_exists("/etc/ssh/.ssh.db")){foreach(file("/etc/ssh/.ssh.db") as$l){if(pr
 <div class="cd"><h3>เปลี่ยนรหัสผ่าน</h3><div><select id="cp_user"><option value="">เลือก...</option><?php foreach($users as$u):?><option value="<?=$u?>"><?=$u?></option><?php endforeach;?></select><input id="cp_pass" placeholder="รหัสผ่านใหม่"><button class="btn-p" onclick="var u=document.getElementById('cp_user').value,p=document.getElementById('cp_pass').value;if(u&&p){location.href='?page=create&action=passwd&user='+u+'&pass='+p;}">เปลี่ยน</button></div></div>
 <div class="cd"><h3>ต่ออายุผู้ใช้</h3><div><select id="r_user"><option value="">เลือก...</option><?php foreach($users as$u):?><option value="<?=$u?>"><?=$u?></option><?php endforeach;?></select><input id="r_days" type="number" value="30"><input id="r_gb" type="number" value="-1" placeholder="กำหนด GB (-1=คงเดิม, 0=ไม่จำกัด)"><input id="r_ip" type="number" value="-1" placeholder="ลิมิต IP (-1=คงเดิม, 0=ไม่จำกัด)"><button class="btn-p" onclick="var u=document.getElementById('r_user').value,d=document.getElementById('r_days').value,g=document.getElementById('r_gb').value,i=document.getElementById('r_ip').value;if(u&&d){location.href='?page=create&action=renew&user='+u+'&days='+d+'&gb='+g+'&ip='+i;}">ต่ออายุ</button></div></div>
 <div class="cd"><h3>เปลี่ยนพอร์ต SSH WS</h3>
-<div><input id="new_port" type="number" placeholder="พอร์ตใหม่" value="8080">
-<button class="btn-p" onclick="var p=document.getElementById('new_port').value;if(p&&p!=8080){location.href='?page=create&action=port&pass='+p;}">เปลี่ยนพอร์ต</button></div></div>
+<div><input id="new_port" type="number" placeholder="พอร์ตใหม่" value="<?=$port?>">
+<button class="btn-p" onclick="var p=document.getElementById('new_port').value;if(p&&p!=<?=$port?>){location.href='?page=create&action=port&pass='+p;}">เปลี่ยนพอร์ต</button></div></div>
 <?php elseif($page==="delete"):?>
 <div class="cd" style="max-width:400px"><h3>ลบผู้ใช้ SSH</h3><div><select id="del_user"><option value="">เลือก...</option><?php foreach($users as$u):?><option value="<?=$u?>"><?=$u?></option><?php endforeach;?></select><button class="btn-d" onclick="if(document.getElementById('del_user').value){location.href='?page=delete&action=del&user='+document.getElementById('del_user').value;}">ลบ SSH</button></div></div>
 
