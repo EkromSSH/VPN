@@ -1,29 +1,21 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════
-#  PORT SERVICE INFO — แสดงพอร์ตปัจจุบัน (อ่านจาก config จริง)
-#  v3: จัดเส้นขอบให้ตรงทุกบรรทัด (นับความกว้างไทย/อังกฤษ)
+#  PORT SERVICE INFO v4 — แสดงพอร์ตปัจจุบัน (อ่านจาก config จริง)
+#  ดีไซน์: ไม่มีเส้นขวา (กันเพี้ยนทุกฟอนต์/ทุกเครื่อง)
 # ═══════════════════════════════════════════════════════════
-clear
-NC='\033[0m'
-Y='\033[0;33m'
-G='\033[0;32m'
-C='\033[0;36m'
-W='\033[1;37m'
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
-# ── ฟังก์ชันจัดตำแหน่ง (คืน label + เติมช่องว่างให้ครบ w ช่อง) ──
+# ── สี ──
+Y='\e[33m'; G='\e[32m'; C='\e[36m'; W='\e[1;37m'; R='\e[31m'; NC='\e[0m'
+
+# ── pad_col: จัดตำแหน่ง (ไทย=2, อังกฤษ=1, สระลอย=0) ──
 pad_col() {
-  local s="$1" w="$2"
-  python3 -c "
+    python3 -c "
 import sys, unicodedata
-s = sys.argv[1]
-w = int(sys.argv[2])
-length = 0
-for c in s:
-    if unicodedata.combining(c):
-        continue
-    length += 2 if ord(c) > 0x7F else 1
-sys.stdout.write(s + ' ' * max(0, w - length))
-" "$s" "$w"
+s, w = sys.argv[1], int(sys.argv[2])
+n = sum(2 if ord(c) > 0x2E80 and not unicodedata.combining(c) else (0 if unicodedata.combining(c) else 1) for c in s)
+print(s + ' ' * max(0, w - n))
+" "$1" "$2"
 }
 
 # ── อ่านค่าจริงจากระบบ ──
@@ -39,12 +31,12 @@ WS_INT=$(grep -oP 'listen_port:\s*\K[0-9]+' "$TUN_CFG" 2>/dev/null | head -1)
 [ -z "$WS_INT" ] && WS_INT=$(grep -oP 'ws-local 127\.0\.0\.1:\K[0-9]+' "$HAPROXY_CFG" 2>/dev/null | head -1)
 [ -z "$WS_INT" ] && WS_INT=8081
 
-# Xray port (443 = TLS ผ่าน nginx, 80 = None TLS ผ่าน haproxy→xray)
+# Xray port (443 = TLS ผ่าน nginx)
 XRAY_PORT=$(grep -oP 'listen \K[0-9]+(?= ssl http2)' /etc/nginx/conf.d/xray.conf 2>/dev/null | head -1)
 [ -z "$XRAY_PORT" ] && XRAY_PORT=443
 # SSH WS SSL (443 — path /ssh-ws)
 WS_SSL=443
-# Xray None TLS (80 — path /vmess /vless ผ่าน haproxy → xray 10009)
+# Xray None TLS (80 — path /vmess /vless)
 XRAY_NONETLS=80
 
 PORT_SSH=22
@@ -59,39 +51,37 @@ B1=$(ss -tln | grep -q ':7100 ' && echo "ON" || echo "OFF")
 B2=$(ss -tln | grep -q ':7200 ' && echo "ON" || echo "OFF")
 B3=$(ss -tln | grep -q ':7300 ' && echo "ON" || echo "OFF")
 
-# ── แสดงผล (ทุกบรรทัดกว้าง 46 ช่อง — เส้นขวาตรงกัน) ──
-WIDTH=46
+# ── แสดงผล (กรอบซ้าย + ไม่มีเส้นขวา — กันเพี้ยนทุกเครื่อง) ──
 BORDER="──────────────────────────────────────────────"
 
 echo -e "${Y}┌─$BORDER─┐${NC}"
-echo -e "${Y}│${NC} $(pad_col 'PORT SERVICE INFO' 44) ${Y}│${NC}"
+echo -e "${Y}│${NC} ${G}PORT SERVICE INFO${NC}"
 echo -e "${Y}├─$BORDER─┤${NC}"
-echo -e "${Y}│${NC} $(pad_col '>>> Service & Port (อัตโนมัติ)' 44) ${Y}│${NC}"
+echo -e "${Y}│${NC} $(pad_col '>>> Service & Port (อัตโนมัติ)' 44)"
 echo -e "${Y}├─$BORDER─┤${NC}"
-echo -e "${Y}│${NC} $(pad_col 'SSH Websocket (public)' 30)${G}$(pad_col "$WS_PUB" 14)${NC} ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'SSH Websocket SSL' 30)${G}$(pad_col "$WS_SSL" 14)${NC} ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'SSH WS Internal' 30)${C}$(pad_col "$WS_INT" 14)${NC} ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Xray (VMESS/VLESS/TROJAN/SS)' 30)$(pad_col "$XRAY_PORT" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Xray None TLS (VMESS/VLESS)' 30)$(pad_col "$XRAY_NONETLS" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Open SSH' 30)$(pad_col "$PORT_SSH" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Dropbear' 30)$(pad_col "$PORT_DROPBEAR" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'OpenVPN TCP' 30)$(pad_col '443, 1194' 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'OpenVPN UDP' 30)$(pad_col "$PORT_OVPN_UDP" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Nginx Webserver' 30)$(pad_col '443, 80, 81' 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Haproxy Loadbalancer' 30)$(pad_col "443, $WS_PUB" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'DNS Server' 30)$(pad_col '443, 53' 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'DNS Client' 30)$(pad_col '443, 88' 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'XRAY Vmess TLS' 30)$(pad_col '443' 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'XRAY Vless TLS' 30)$(pad_col '443' 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Trojan WS' 30)$(pad_col '443' 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Shadowsocks WS' 30)$(pad_col '443' 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'BadVPN 1' 30)$(pad_col "7100 [$B1]" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'BadVPN 2' 30)$(pad_col "7200 [$B2]" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'BadVPN 3' 30)$(pad_col "7300 [$B3]" 14) ${Y}│${NC}"
-echo -e "${Y}│${NC} $(pad_col 'Proxy Squid' 30)$(pad_col "$PORT_SQUID [$SQUID_ST]" 14) ${Y}│${NC}"
+echo -e "${Y}│${NC} $(pad_col 'SSH Websocket (public)' 28): ${G}$WS_PUB${NC}"
+echo -e "${Y}│${NC} $(pad_col 'SSH Websocket SSL' 28): ${G}$WS_SSL${NC}"
+echo -e "${Y}│${NC} $(pad_col 'SSH WS Internal' 28): ${C}$WS_INT${NC}"
+echo -e "${Y}│${NC} $(pad_col 'Xray (VMESS/VLESS/TROJAN/SS)' 28): $XRAY_PORT"
+echo -e "${Y}│${NC} $(pad_col 'Xray None TLS (VMESS/VLESS)' 28): $XRAY_NONETLS"
+echo -e "${Y}│${NC} $(pad_col 'Open SSH' 28): $PORT_SSH"
+echo -e "${Y}│${NC} $(pad_col 'Dropbear' 28): $PORT_DROPBEAR"
+echo -e "${Y}│${NC} $(pad_col 'OpenVPN TCP' 28): 443, 1194"
+echo -e "${Y}│${NC} $(pad_col 'OpenVPN UDP' 28): $PORT_OVPN_UDP"
+echo -e "${Y}│${NC} $(pad_col 'Nginx Webserver' 28): 443, 80, 81"
+echo -e "${Y}│${NC} $(pad_col 'Haproxy Loadbalancer' 28): 443, $WS_PUB"
+echo -e "${Y}│${NC} $(pad_col 'DNS Server' 28): 443, 53"
+echo -e "${Y}│${NC} $(pad_col 'DNS Client' 28): 443, 88"
+echo -e "${Y}│${NC} $(pad_col 'XRAY Vmess TLS' 28): 443"
+echo -e "${Y}│${NC} $(pad_col 'XRAY Vless TLS' 28): 443"
+echo -e "${Y}│${NC} $(pad_col 'Trojan WS' 28): 443"
+echo -e "${Y}│${NC} $(pad_col 'Shadowsocks WS' 28): 443"
+echo -e "${Y}│${NC} $(pad_col 'BadVPN 1' 28): 7100 [$B1]"
+echo -e "${Y}│${NC} $(pad_col 'BadVPN 2' 28): 7200 [$B2]"
+echo -e "${Y}│${NC} $(pad_col 'BadVPN 3' 28): 7300 [$B3]"
+echo -e "${Y}│${NC} $(pad_col 'Proxy Squid' 28): $PORT_SQUID [$SQUID_ST]"
 echo -e "${Y}└─$BORDER─┘${NC}"
 echo ""
 echo -e "${W}💡 เปลี่ยนพอร์ต SSH WS: เมนู 21 (Web Panel) → เปลี่ยนพอร์ต SSH WS${NC}"
-echo ""
-read -n 1 -s -r -p "กดปุ่มใดก็ได้เพื่อกลับไปที่เมนู"
-menu
+echo -e "${W}กดปุ่มใดก็ได้เพื่อกลับไปที่เมนู${NC}"
+read -rsn1
