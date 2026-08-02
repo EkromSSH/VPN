@@ -193,7 +193,7 @@
                }
             ],
             "fallbacks": [
-              {"path": "/vmess", "dest": 10002},
+              {"path": "/vmess", "dest": 10010},
               {"dest": 8081}
             ]
        },
@@ -201,6 +201,25 @@
          "network": "ws",
             "wsSettings": {
                 "path": "/vless"
+          }
+        }
+     },
+   {
+     "listen": "127.0.0.1",
+     "port": "10010",
+     "protocol": "vmess",
+      "settings": {
+            "clients": [
+               {
+                 "id": "36326ea2-6994-4d53-bcd5-f43bbdaec562",
+                 "alterId": 0
+               }
+            ]
+       },
+       "streamSettings":{
+         "network": "ws",
+            "wsSettings": {
+                "path": "/vmess"
           }
         }
      }
