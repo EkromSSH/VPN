@@ -376,6 +376,9 @@ function download_config(){
     wget -O /etc/nginx/conf.d/xray.conf "${REPO}config/xray.conf" >/dev/null 2>&1
     # SSH WS SSL (443) — แยกจาก Xray (ย้าย Xray ไป 4443)
     wget -O /etc/nginx/conf.d/ssh-ws-ssl.conf "${REPO}config/ssh-ws-ssl.conf" >/dev/null 2>&1
+    # SSH WS + Xray None TLS (80) — path-based
+    wget -O /etc/nginx/conf.d/ssh-ws-80.conf "${REPO}config/ssh-ws-80.conf" >/dev/null 2>&1
+    chmod 644 /etc/nginx/conf.d/ssh-ws-80.conf 2>/dev/null
     sed -i "s/xxx/${domain}/g" /etc/nginx/conf.d/xray.conf
     wget -O /etc/nginx/nginx.conf "${REPO}config/nginx.conf" >/dev/null 2>&1
     mkdir -p /etc/squid
