@@ -275,9 +275,6 @@ function install_admin_panel() {
     wget -O /var/www/admin/index.php "${REPO}admin/index.php" >/dev/null 2>&1
     chmod +x /var/www/admin/index.php
     
-    # > Replace PHP socket in nginx config
-    sed -i "s/PHP_SOCKET/php${PHP_VER}-fpm.sock/g" /etc/nginx/conf.d/admin.conf 2>/dev/null
-    
     # > Download Admin Scripts
     wget -O /usr/local/bin/ssh-admin "${REPO}admin/ssh-admin" >/dev/null 2>&1
     chmod +x /usr/local/bin/ssh-admin
@@ -299,6 +296,9 @@ function install_admin_panel() {
     # > Download Nginx Admin Configs
     wget -O /etc/nginx/conf.d/admin.conf "${REPO}config/admin.conf" >/dev/null 2>&1
     wget -O /etc/nginx/conf.d/admin-redirect.conf "${REPO}config/admin-redirect.conf" >/dev/null 2>&1
+
+    # > Replace PHP socket in nginx config (หลัง wget admin.conf)
+    sed -i "s/PHP_SOCKET/php${PHP_VER}-fpm.sock/g" /etc/nginx/conf.d/admin.conf 2>/dev/null
     
     # > Setup sudoers for www-data (admin panel user management)
     echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/ssh-admin" > /etc/sudoers.d/admin-panel
