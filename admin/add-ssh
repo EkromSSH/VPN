@@ -59,11 +59,11 @@ del_quota() {
 echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 echo -e "\e[42m              บัญชี SSH Ovpn            \E[0m"
 echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-read -p "ชื่อผู้ใช้: " LOGIN
-read -p "รหัสผ่าน: " PASSWD
-read -p "หมดอายุ (วัน): " EXPIRED
-read -p "กำหนด GB (0=ไม่จำกัด): " LIMIT_GB
-read -p "ลิมิต IP (จำนวนเครื่อง, 0=ไม่จำกัด): " LIMIT_IP
+read -p "User: " LOGIN
+read -p "Password: " PASSWD
+read -p "Days: " EXPIRED
+read -p "GB (0=unlimited): " LIMIT_GB
+read -p "IP limit (0=unlimited): " LIMIT_IP
 IP=$(curl -sS ifconfig.me)
 IP=$(curl -s ipinfo.io/ip )
 IP=$(curl -sS ipv4.icanhazip.com)

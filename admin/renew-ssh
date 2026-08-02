@@ -28,7 +28,7 @@ set_quota() {
 echo -e "\033[1;93m─────────────────────────────────────────\033[0m"
 echo -e "\e[42m                 ต่ออายุผู้ใช้             \E[0m"
 echo -e "\033[1;93m─────────────────────────────────────────\033[0m"
-read -p "ชื่อผู้ใช้: " User
+read -p "User: " User
 
 if getent passwd $User >/dev/null 2>&1; then
     ok="ok"
@@ -54,13 +54,13 @@ if [ $? -eq 0 ]; then
     [ -z "$OLD_GB" ] && OLD_GB=0
     [ -z "$OLD_IP" ] && OLD_IP=0
 
-    read -p "ขยายวัน: " Days
+    read -p "Days: " Days
     if [ -z $Days ]; then
         Days="1"
     fi
-    read -p "กำหนด GB (เดิม $OLD_GB, Enter=คงเดิม, 0=ไม่จำกัด): " NEW_GB
+    read -p "GB (current: " NEW_GB
     [ -z "$NEW_GB" ] && NEW_GB=$OLD_GB
-    read -p "ลิมิต IP (เดิม $OLD_IP, Enter=คงเดิม, 0=ไม่จำกัด): " NEW_IP
+    read -p "IP limit (current: " NEW_IP
     [ -z "$NEW_IP" ] && NEW_IP=$OLD_IP
 
     Today=$(date +%s)
