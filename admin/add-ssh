@@ -59,11 +59,11 @@ del_quota() {
 echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 echo -e "\e[42m              บัญชี SSH Ovpn            \E[0m"
 echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-read -p "ชื่อผู้ใช้:" LOGIN
-read -p "รหัสผ่าน:" PASSWD
-read -p "หมดอายุ (วัน):" EXPIRED
-read -p "กำหนด GB (0=ไม่จำกัด):" LIMIT_GB
-read -p "ลิมิต IP (จำนวนเครื่อง, 0=ไม่จำกัด):" LIMIT_IP
+read -p "ชื่อผู้ใช้: " LOGIN
+read -p "รหัสผ่าน: " PASSWD
+read -p "หมดอายุ (วัน): " EXPIRED
+read -p "กำหนด GB (0=ไม่จำกัด): " LIMIT_GB
+read -p "ลิมิต IP (จำนวนเครื่อง, 0=ไม่จำกัด): " LIMIT_IP
 IP=$(curl -sS ifconfig.me)
 IP=$(curl -s ipinfo.io/ip )
 IP=$(curl -sS ipv4.icanhazip.com)
@@ -102,9 +102,9 @@ cat > /var/www/html/ssh-$LOGIN.txt <<-END
               รูปแบบบัญชี SSH OVPN
 ====================================================================
 
-$(pad_col 'ชื่อผู้ใช้' 12) : $LOGIN
-$(pad_col 'รหัสผ่าน' 12) : $PASSWD
-$(pad_col 'หมดอายุ' 12) : $exp
+ชื่อผู้ใช้: $LOGIN
+รหัสผ่าน: $PASSWD
+หมดอายุ: $exp
 $(pad_col 'โควต้า' 12) : ${LIMIT_GB:-0} GB
 $(pad_col 'ลิมิต IP' 12) : ${LIMIT_IP:-0} เครื่อง
 __________________________________
@@ -142,9 +142,9 @@ TEXT="
 <code>───────────────────────────</code>
 <code>      บัญชี SSH OVPN      </code>
 <code>───────────────────────────</code>
-<code>$(pad_col 'ชื่อผู้ใช้' 12) : $LOGIN</code>
-<code>$(pad_col 'รหัสผ่าน' 12) : $PASSWD</code>
-<code>$(pad_col 'หมดอายุ' 12) : $exp</code>
+<code>ชื่อผู้ใช้: $LOGIN</code>
+<code>รหัสผ่าน: $PASSWD</code>
+<code>หมดอายุ: $exp</code>
 <code>$(pad_col 'โควต้า' 12) : ${LIMIT_GB:-0} GB</code>
 <code>$(pad_col 'ลิมิต IP' 12) : ${LIMIT_IP:-0} เครื่อง</code>
 <code>───────────────────────────</code>
@@ -185,9 +185,9 @@ clear
 echo -e "\033[1;93m───────────────────────────\033[0m" | tee -a /etc/nevermoressh/user.log
 echo -e "\e[42m      บัญชี SSH OVPN      \E[0m" | tee -a /etc/nevermoressh/user.log
 echo -e "\033[1;93m───────────────────────────\033[0m" | tee -a /etc/nevermoressh/user.log
-echo -e "$(pad_col 'ชื่อผู้ใช้' 12) : $LOGIN" | tee -a /etc/nevermoressh/user.log
-echo -e "$(pad_col 'รหัสผ่าน' 12) : $PASSWD" | tee -a /etc/nevermoressh/user.log
-echo -e "$(pad_col 'หมดอายุ' 12) : $exp" | tee -a /etc/nevermoressh/user.log
+echo -e "ชื่อผู้ใช้: $LOGIN" | tee -a /etc/nevermoressh/user.log
+echo -e "รหัสผ่าน: $PASSWD" | tee -a /etc/nevermoressh/user.log
+echo -e "หมดอายุ: $exp" | tee -a /etc/nevermoressh/user.log
 echo -e "$(pad_col 'โควต้า' 12) : ${LIMIT_GB:-0} GB | $(pad_col 'ลิมิต IP' 12) : ${LIMIT_IP:-0} เครื่อง" | tee -a /etc/nevermoressh/user.log
 echo -e "\033[1;93m───────────────────────────\033[0m" | tee -a /etc/nevermoressh/user.log
 echo -e "IP              : $IP" | tee -a /etc/nevermoressh/user.log
