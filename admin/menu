@@ -169,6 +169,7 @@ case $menu in
     ;;
 8)
     portin
+    menu
     ;;
 9)
     gotop
