@@ -330,23 +330,9 @@ EOF
     systemctl daemon-reload 2>/dev/null
     systemctl restart nginx squid 2>/dev/null
     
-    # > Create ws-ssh systemd service
-    cat >/etc/systemd/system/ws-ssh.service <<EOF
-[Unit]
-Description=SSH WebSocket Handler
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/python3 /usr/local/bin/ws-ssh.py
-Restart=always
-RestartSec=3
-LimitNOFILE=100000
-LimitNPROC=10000
-
-[Install]
-WantedBy=multi-user.target
-EOF
+    # > (ลบ ws-ssh.service — ระบบใหม่ใช้ websocket binary + tun.conf (ws.service) ไม่ใช้ ws-ssh.py)
+    systemctl stop ws-ssh 2>/dev/null; systemctl disable ws-ssh 2>/dev/null
+    rm -f /etc/systemd/system/ws-ssh.service
 
     # > Auto-update cron every 6 hours
     cat >/etc/cron.d/ekrom-update <<EOF
