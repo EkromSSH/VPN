@@ -60,7 +60,7 @@ if [ $? -eq 0 ]; then
     fi
     read -p "กำหนด GB (เดิม $OLD_GB, Enter=คงเดิม, 0=ไม่จำกัด): " NEW_GB
     [ -z "$NEW_GB" ] && NEW_GB=$OLD_GB
-    read -p "ลิมิต IP (เดิม $OLD_IP, Enter=คงเดิม, 0=ไม่จำกัด):" NEW_IP
+    read -p "ลิมิต IP (เดิม $OLD_IP, Enter=คงเดิม, 0=ไม่จำกัด): " NEW_IP
     [ -z "$NEW_IP" ] && NEW_IP=$OLD_IP
 
     Today=$(date +%s)

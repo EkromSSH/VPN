@@ -105,8 +105,8 @@ cat > /var/www/html/ssh-$LOGIN.txt <<-END
 ชื่อผู้ใช้: $LOGIN
 รหัสผ่าน: $PASSWD
 หมดอายุ: $exp
-$(pad_col 'โควต้า' 12) : ${LIMIT_GB:-0} GB
-$(pad_col 'ลิมิต IP' 12) : ${LIMIT_IP:-0} เครื่อง
+โควต้า: ${LIMIT_GB:-0} GB
+ลิมิต IP: ${LIMIT_IP:-0} เครื่อง
 __________________________________
 IP              : $IP
 Host            : $domain
@@ -145,8 +145,8 @@ TEXT="
 <code>ชื่อผู้ใช้: $LOGIN</code>
 <code>รหัสผ่าน: $PASSWD</code>
 <code>หมดอายุ: $exp</code>
-<code>$(pad_col 'โควต้า' 12) : ${LIMIT_GB:-0} GB</code>
-<code>$(pad_col 'ลิมิต IP' 12) : ${LIMIT_IP:-0} เครื่อง</code>
+<code>โควต้า: ${LIMIT_GB:-0} GB</code>
+<code>ลิมิต IP: ${LIMIT_IP:-0} เครื่อง</code>
 <code>───────────────────────────</code>
 <code>IP              : $IP</code>
 <code>Host            : $domain</code>
@@ -188,7 +188,7 @@ echo -e "\033[1;93m────────────────────�
 echo -e "ชื่อผู้ใช้: $LOGIN" | tee -a /etc/nevermoressh/user.log
 echo -e "รหัสผ่าน: $PASSWD" | tee -a /etc/nevermoressh/user.log
 echo -e "หมดอายุ: $exp" | tee -a /etc/nevermoressh/user.log
-echo -e "$(pad_col 'โควต้า' 12) : ${LIMIT_GB:-0} GB | $(pad_col 'ลิมิต IP' 12) : ${LIMIT_IP:-0} เครื่อง" | tee -a /etc/nevermoressh/user.log
+echo -e "โควต้า: ${LIMIT_GB:-0} GB | ลิมิต IP: ${LIMIT_IP:-0} เครื่อง" | tee -a /etc/nevermoressh/user.log
 echo -e "\033[1;93m───────────────────────────\033[0m" | tee -a /etc/nevermoressh/user.log
 echo -e "IP              : $IP" | tee -a /etc/nevermoressh/user.log
 echo -e "Host            : $domain" | tee -a /etc/nevermoressh/user.log
