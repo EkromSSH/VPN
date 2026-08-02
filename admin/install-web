@@ -1,0 +1,60 @@
+#!/bin/bash
+# Install/Repair Web Admin Panel
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+REPO="https://raw.githubusercontent.com/EkromSSH/VPN/main/"
+
+clear
+echo -e "\033[1;35m┌─────────────────────────────────────────────────────┐\033[0m"
+echo -e "\033[1;35m│         🌐 ติดตั้ง/ซ่อมแซม WEB ADMIN PANEL          \033[0m"
+echo -e "\033[1;35m└─────────────────────────────────────────────────────┘\033[0m"
+echo ""
+
+# Create directory
+mkdir -p /var/www/admin
+
+# Install PHP
+echo ">> กำลังติดตั้ง PHP..."
+apt update -qq
+apt install php-fpm php-cli -y 2>/dev/null || add-apt-repository ppa:ondrej/php -y >/dev/null 2>&1 && apt update -qq && apt install php8.1-fpm php8.1-cli -y 2>/dev/null || apt install php-fpm -y
+
+# Detect PHP version
+PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "7.4")
+echo ">> PHP version: ${PHP_VER}"
+
+# Start PHP-FPM
+systemctl enable php${PHP_VER}-fpm 2>/dev/null
+systemctl start php${PHP_VER}-fpm 2>/dev/null
+
+# Download Admin Panel
+echo ">> กำลังดาวน์โหลดไฟล์..."
+wget -q -O /var/www/admin/index.php "${REPO}admin/index.php"
+wget -q -O /usr/local/bin/ssh-admin "${REPO}admin/ssh-admin"
+wget -q -O /usr/local/bin/xray-admin "${REPO}admin/xray-admin"
+chmod +x /var/www/admin/index.php
+chmod +x /usr/local/bin/ssh-admin
+chmod +x /usr/local/bin/xray-admin
+
+# Download/update nginx config
+wget -q -O /etc/nginx/conf.d/admin.conf "${REPO}config/admin.conf"
+wget -q -O /etc/nginx/conf.d/admin-redirect.conf "${REPO}config/admin-redirect.conf"
+sed -i "s/PHP_SOCKET/php${PHP_VER}-fpm.sock/g" /etc/nginx/conf.d/admin.conf
+
+# Sudoers
+echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/ssh-admin" > /etc/sudoers.d/admin-panel
+echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/xray-admin" >> /etc/sudoers.d/admin-panel
+chmod 440 /etc/sudoers.d/admin-panel
+
+# Reload nginx
+systemctl reload nginx
+
+IP=$(curl -s ipv4.icanhazip.com)
+echo ""
+echo -e "\033[1;35m┌─────────────────────────────────────────────────────┐\033[0m"
+echo -e "\033[1;35m│  ✅ ติดตั้งสำเร็จ!\033[0m"
+echo -e "\033[1;35m│  URL  : http://${IP}:8888\033[0m"
+echo -e "\033[1;35m│  PASS : admin123\033[0m"
+echo -e "\033[1;35m└─────────────────────────────────────────────────────┘\033[0m"
+echo ""
+read -p "Press Enter to continue..."
