@@ -1,0 +1,10 @@
+#!/bin/bash
+# เปลี่ยนรหัสผ่าน web panel (เรียกผ่าน su-exec)
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+if [ -z "$1" ] || [ ${#1} -lt 4 ]; then
+    echo "FAIL: รหัสผ่านสั้นเกิน"
+    exit 1
+fi
+echo "$1" > /etc/ssh/.panel_pass
+chmod 644 /etc/ssh/.panel_pass
+echo "OK"

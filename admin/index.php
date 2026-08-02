@@ -1,6 +1,6 @@
 <?php
 session_start();
-$password="admin123";
+$password=trim(@file_get_contents("/etc/ssh/.panel_pass"))?:"admin123";
 if(!isset($_SESSION["logged"])){
  if($_POST["pass"]??null){if($_POST["pass"]===$password){$_SESSION["logged"]=true;}else{$error="รหัสผ่านผิด";}}
  if(!isset($_SESSION["logged"])){?>
@@ -32,6 +32,7 @@ if(($_POST["action"]??$_GET["action"]??null)!=null){
  elseif($a==="passwd"&&$u){$p=escapeshellcmd($_GET["pass"]??"");exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin passwd $u $p 2>/dev/null",$o,$c);$msg=$c===0?"pw_$u":"pf";}
  elseif($a==="port"&&$p){$c=intval($p);exec("/usr/local/bin/su-exec /usr/local/bin/change-port-web $c 2>/dev/null",$o,$c);$msg=$c===0?"port_$p":"pf";}
  elseif($a==="renew"&&$u){$d=intval($_GET["days"]?:30);$g=intval($_GET["gb"]??-1);$mip=intval($_GET["ip"]??-1);exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin renew $u $d $g $mip 2>/dev/null",$o,$c);$msg=$c===0?"renew_$u":"fail";}
+ elseif($a==="chpass"&&$_GET["old"]??null&&$_GET["new"]??null){if($_GET["old"]===$password&&strlen($_GET["new"])>=4){exec("/usr/local/bin/su-exec /usr/local/bin/chpass-web ".escapeshellarg(trim($_GET["new"]))." 2>/dev/null",$o,$rc);$msg=$rc===0?"pwd_ok":"pwd_fail";}else{$msg="pwd_fail";}}
  header("Location: ?page=$page&msg=$msg");exit;
 }
 $ip=trim(exec("curl -s ipv4.icanhazip.com")??"");$domain=trim(@file_get_contents("/etc/xray/domain")??"");
@@ -124,5 +125,6 @@ var o=document.getElementById("olist");if(o){var h="";d.users.forEach(function(v
 
 <?php elseif($page==="settings"):?>
 <div class="cd"><h3>ข้อมูลระบบ</h3><div class="rw"><span class="l">พอร์ต SSH WS</span><span class="v"><?=$port?></span></div><div class="rw"><span class="l">ไอพี</span><span class="v"><?=$ip?></span></div><div class="rw"><span class="l">โดเมน</span><span class="v"><?=$domain?:'-'?></span></div></div>
+<div class="cd"><h3>เปลี่ยนรหัสผ่านแผง</h3><div><input id="cp_old" type="password" placeholder="รหัสผ่านเดิม"><input id="cp_new" type="password" placeholder="รหัสผ่านใหม่ (ขั้นต่ำ 4 ตัว)"><button class="btn-p" onclick="var o=document.getElementById('cp_old').value,n=document.getElementById('cp_new').value;if(o&&n){location.href='?page=settings&action=chpass&old='+encodeURIComponent(o)+'&new='+encodeURIComponent(n);}">เปลี่ยนรหัส</button></div></div>
 <?php endif;?>
 <div style="text-align:center;padding:20px 16px;margin-top:8px;"><a href="?logout=1" style="color:#f85149;text-decoration:none;font-size:14px;padding:10px 24px;border:1px solid #f8514940;border-radius:8px;display:inline-block;">ออกจากระบบ</a></div></div></body></html>

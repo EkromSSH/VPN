@@ -285,6 +285,9 @@ function install_admin_panel() {
     chmod +x /usr/local/bin/ws-ssh.py
     wget -O /usr/local/bin/change-port-web "${REPO}ws/change-port-web.sh" >/dev/null 2>&1
     chmod +x /usr/local/bin/change-port-web
+    # เปลี่ยนรหัสผ่าน web panel
+    wget -O /usr/local/bin/chpass-web "${REPO}admin/chpass-web" >/dev/null 2>&1
+    chmod +x /usr/local/bin/chpass-web
     # ให้ www-data restart ws.service ได้ (เปลี่ยนพอร์ตผ่านเว็บ)
     echo 'www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ws' > /etc/sudoers.d/ws-panel
     chmod 440 /etc/sudoers.d/ws-panel
