@@ -29,12 +29,15 @@ sys.stdout.write(s + ' ' * max(0, w - length))
 # ── อ่านค่าจริงจากระบบ ──
 HAPROXY_CFG="/etc/haproxy/haproxy.cfg"
 TUN_CFG="/etc/websocket/tun.conf"
+NGINX_80="/etc/nginx/conf.d/ssh-ws-80.conf"
 
-WS_PUB=$(grep -oP 'bind \*:\K[0-9]+' "$HAPROXY_CFG" 2>/dev/null | head -1)
+# SSH WS public = nginx (ssh-ws-80.conf) — ไม่ใช่ haproxy!
+WS_PUB=$(grep -oP 'listen \K[0-9]+(?=;)' "$NGINX_80" 2>/dev/null | head -1)
+[ -z "$WS_PUB" ] && WS_PUB=80
+# SSH WS internal = websocket tun.conf
 WS_INT=$(grep -oP 'listen_port:\s*\K[0-9]+' "$TUN_CFG" 2>/dev/null | head -1)
 [ -z "$WS_INT" ] && WS_INT=$(grep -oP 'ws-local 127\.0\.0\.1:\K[0-9]+' "$HAPROXY_CFG" 2>/dev/null | head -1)
-[ -z "$WS_PUB" ] && WS_PUB=80
-[ -z "$WS_INT" ] && WS_INT=8080
+[ -z "$WS_INT" ] && WS_INT=8081
 
 # Xray port (443 = TLS ผ่าน nginx, 80 = None TLS ผ่าน haproxy→xray)
 XRAY_PORT=$(grep -oP 'listen \K[0-9]+(?= ssl http2)' /etc/nginx/conf.d/xray.conf 2>/dev/null | head -1)
