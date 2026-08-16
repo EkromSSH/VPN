@@ -1,7 +1,8 @@
 #!/bin/bash
-# setup_https.sh — ทำ HTTPS พอร์ต 81+443 รองรับทุกโดเมน/IP (เครื่องลูกค้า)
+# setup_https.sh — ทำ HTTPS พอร์ต 80+81+443 รองรับทุกโดเมน/IP (เครื่องลูกค้า)
 # รัน: sudo -i  แล้ว  bash setup_https.sh
-# จะถาม: ชื่อโดเมนเต็ม (เช่น www.idavpn.win หรือ vpn.idavpn.win หรือ idavpn.win)
+# จะถาม: ชื่อโดเมนเต็ม (เช่น www.idavpn.win)
+# ไม่ต้องเพิ่ม TXT — ใช้ webroot พอร์ต 80 (เหมือน 133)
 
 # 1) ถามโดเมน (รับค่าเต็ม ไม่เติมอะไรข้างหน้า)
 read -p "ใส่โดเมนเต็ม (เช่น www.idavpn.win): " DOMAIN
@@ -22,8 +23,14 @@ apt update -y && apt install -y nginx certbot
 systemctl enable --now nginx
 mkdir -p /var/www/shop
 
-# 4) config nginx พอร์ต 81(redirect) + 443(ssl) รองรับทุกโดเมน
+# 4) config nginx: พอร์ต 80 (ให้ LE เข้ามาทำ webroot) + 81 (redirect) + 443 (ssl)
 cat > /etc/nginx/conf.d/all.conf <<NGINX
+server {
+    listen 80;
+    server_name $DOMAIN;
+    location /.well-known/acme-challenge/ { root /var/www/shop; }
+    location / { return 301 https://\$host\$request_uri; }
+}
 server {
     listen 81 default_server;
     listen [::]:81 default_server;
@@ -45,21 +52,15 @@ server {
 }
 NGINX
 
-if ss -tlnp 2>/dev/null | grep -q ":443 "; then
-  echo "⚠️ พอร์ต 443 ถูกใช้งานอยู่ (อาจเป็น xray) — ย้าย xray ก่อนรัน nginx"
-fi
-
 nginx -t && systemctl reload nginx
 
-# 5) ขอ cert ด้วย DNS challenge
-echo ">>> กำลังขอ cert ด้วย DNS challenge สำหรับ: $DOMAIN"
-echo ">>> certbot จะให้เพิ่ม TXT record '_acme-challenge.$DOMAIN' ใน DNS"
-echo ">>> เพิ่มเสร็จแล้วรอ 2-3 นาที ค่อยกด Enter"
-certbot certonly --manual --preferred-challenges dns -d "$DOMAIN" --agree-tos -m "$EMAIL"
+# 5) ขอ cert ด้วย webroot (ไม่ต้อง TXT)
+echo ">>> กำลังขอ cert ด้วย webroot พอร์ต 80..."
+certbot certonly --webroot -w /var/www/shop -d "$DOMAIN" --non-interactive --agree-tos -m "$EMAIL"
 
-# 6) โหลด nginx ใหม่
+# 6) โหลด nginx ใหม่ (หลังได้ cert)
 nginx -t && systemctl reload nginx
 
 echo ""
 echo "🎉 เสร็จ! เข้า https://$DOMAIN"
-echo "💡 เพิ่มโดเมนใหม่: ชี้ DNS มา IP นี้ แล้วรัน certbot certonly --manual --preferred-challenges dns -d 'โดเมนใหม่' "
+echo "💡 เพิ่มโดเมนใหม่: ชี้ DNS มา IP นี้ แล้วรัน certbot certonly --webroot -w /var/www/shop -d 'โดเมนใหม่' "
