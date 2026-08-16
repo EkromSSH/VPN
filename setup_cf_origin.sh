@@ -1,24 +1,32 @@
 #!/bin/bash
-# setup_cf_origin.sh — ติดตั้ง Cloudflare Origin Certificate (วิธี 3)
+# setup_cf_origin.sh — ติดตั้ง Cloudflare Origin Certificate (สำหรับลูกค้า ไม่ต้อง AI)
 # วิธีใช้:
-#   1) สร้าง Origin Cert ใน CF (SSL/TLS > Origin Server > Create Certificate)
-#      Hostnames: idavpn.win, www.idavpn.win | Validity: 15 years | RSA 2048
-#   2) รัน:  bash setup_cf_origin.sh
-#   3) วาง Origin Certificate (กล่องบน) -> Enter -> วาง Private Key (กล่องล่าง) -> Ctrl+D
-# สคริปต์จะเซ็ต nginx + reload ให้ จบในรันเดียว
+#   1) สร้าง Origin Cert ใน CF (SSL/TLS > Origin Server > Create)
+#   2) เซฟเป็นไฟล์ 2 อันในโฟลเดอร์เดียวกันกับสคริปต์นี้:
+#        cert.pem  (วาง Origin Certificate)
+#        key.pem   (วาง Private Key)
+#   3) รัน:  bash setup_cf_origin.sh www.โดเมนของคุณ.com
+# สคริปต์อ่านจากไฟล์ (ไม่ต้องวางในจอ) เซ็ต nginx ให้จบ
 
 set -e
-
 DOMAIN="${1:-www.idavpn.win}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CERT_FILE="$SCRIPT_DIR/cert.pem"
+KEY_FILE="$SCRIPT_DIR/key.pem"
 WEBROOT="/var/www/shop"
 
-echo ">>> วาง Origin Certificate (รวม -----BEGIN/END CERTIFICATE-----) แล้วกด Enter:"
-CERT=$(cat)
-echo ">>> วาง Private Key (รวม [REDACTED PRIVATE KEY]/END) แล้วกด Ctrl+D:"
-KEY=$(cat)
+if [ ! -f "$CERT_FILE" ]; then
+  echo "❌ หาไฟล์ cert.pem ไม่เจอ — วาง Origin Certificate ลงไฟล์ชื่อ cert.pem ก่อน"
+  exit 1
+fi
+if [ ! -f "$KEY_FILE" ]; then
+  echo "❌ หาไฟล์ key.pem ไม่เจอ — วาง Private Key ลงไฟล์ชื่อ key.pem ก่อน"
+  exit 1
+fi
 
-echo "$CERT" > /etc/ssl/cf-origin.pem
-echo "$KEY"  > /etc/ssl/cf-origin.key
+mkdir -p /etc/ssl
+cp "$CERT_FILE" /etc/ssl/cf-origin.pem
+cp "$KEY_FILE" /etc/ssl/cf-origin.key
 chmod 600 /etc/ssl/cf-origin.key
 chmod 644 /etc/ssl/cf-origin.pem
 
@@ -47,4 +55,4 @@ server {
 NGINX
 
 nginx -t && systemctl reload nginx
-echo "🎉 เสร็จ! ตั้ง CF SSL mode = Full (strict) แล้วเปิด https://$DOMAIN"
+echo "🎉 เสร็จ! ตั้ง CF SSL = Full (strict) แล้วเปิด https://$DOMAIN"
