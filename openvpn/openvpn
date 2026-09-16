@@ -16,11 +16,16 @@ function ovpn_install() {
 function config_easy() {
     cd
     mkdir -p /usr/lib/openvpn/
-    cp /usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so /usr/lib/openvpn/openvpn-plugin-auth-pam.so
+    PAM_SO=$(find /usr/lib -name "openvpn-plugin-auth-pam.so" 2>/dev/null | head -n 1)
+    if [ -n "$PAM_SO" ] && [ "$PAM_SO" != "/usr/lib/openvpn/openvpn-plugin-auth-pam.so" ]; then
+        cp "$PAM_SO" /usr/lib/openvpn/openvpn-plugin-auth-pam.so
+    elif [ -f /usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so ]; then
+        cp /usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-plugin-auth-pam.so /usr/lib/openvpn/openvpn-plugin-auth-pam.so
+    fi
     sed -i 's/#AUTOSTART="all"/AUTOSTART="all"/g' /etc/default/openvpn
-    systemctl enable --now openvpn-server@server-tcp
-    systemctl enable --now openvpn-server@server-udp
-    /etc/init.d/openvpn restart
+    systemctl enable --now openvpn-server@server-tcp 2>/dev/null || systemctl enable --now openvpn@server-tcp 2>/dev/null || true
+    systemctl enable --now openvpn-server@server-udp 2>/dev/null || systemctl enable --now openvpn@server-udp 2>/dev/null || true
+    systemctl restart openvpn 2>/dev/null || /etc/init.d/openvpn restart 2>/dev/null || true
 }
 
 function make_follow() {

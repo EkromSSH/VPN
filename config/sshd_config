@@ -10,6 +10,7 @@
 # possible, but leave them commented.  Uncommented options override the
 # default value.
 
+Include /etc/ssh/sshd_config.d/*.conf
 Port 22
 Port 3369
 Port 2269
@@ -62,7 +63,8 @@ PasswordAuthentication yes
 
 # Change to yes to enable challenge-response passwords (beware issues with
 # some PAM modules and threads)
-ChallengeResponseAuthentication no
+KbdInteractiveAuthentication no
+# ChallengeResponseAuthentication no
 
 # Kerberos options
 #KerberosAuthentication no

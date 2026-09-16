@@ -12,33 +12,20 @@ sleep 4
 clear
 echo " Checking Tool UdpCustom By NevermoreSSH......."
 sleep 4
-clear
-echo " Success Checking Tool..........."
-sleep 4
-clear
-echo " Please Waiting Proses Downloading Toll UdpCustom........"
-sleep 4
-clear
-wget -q --show-progress --load-cookies /tmp/cookies.txt "https://raw.githubusercontent.com/NevermoreSSH/Vergil/main/Tunnel/udp-custom-linux-amd64" -O /root/udp/udp-custom && rm -rf /tmp/cookies.txt
+echo "Downloading UDP Custom binary..."
+REPO_UDP="https://raw.githubusercontent.com/EkromSSH/VPN/main/Tunnel/"
+if [ -f "/root/VPN/Tunnel/udp-custom-linux-amd64" ]; then
+    cp /root/VPN/Tunnel/udp-custom-linux-amd64 /root/udp/udp-custom
+else
+    wget -q "${REPO_UDP}udp-custom-linux-amd64" -O /root/udp/udp-custom 2>/dev/null || \
+    wget -q "https://raw.githubusercontent.com/NevermoreSSH/Vergil/main/Tunnel/udp-custom-linux-amd64" -O /root/udp/udp-custom
+fi
 chmod +x /root/udp/udp-custom
-clear
+
 # install Config Default Udp
-echo ""
-sleep 4
-echo " Proses Download Script Config Default........"
-sleep 4
-clear
-echo " Checking Config Default By NevermoreSSH......."
-sleep 4
-clear
-echo " Success Checking Config Default Tool..........."
-sleep 4
-clear
-echo " Please Waiting Proses Downloading Default Config UdpCustom........"
-sleep 4
-clear
-wget -q --show-progress --load-cookies /tmp/cookies.txt "https://raw.githubusercontent.com/NevermoreSSH/Vergil/main/Tunnel/config.json" -O /root/udp/config.json && rm -rf /tmp/cookies.txt
-chmod 644 /root/udp/config.json
+wget -q "${REPO_UDP}udp-config.json" -O /root/udp/config.json 2>/dev/null || \
+wget -q "https://raw.githubusercontent.com/NevermoreSSH/Vergil/main/Tunnel/config.json" -O /root/udp/config.json 2>/dev/null || true
+chmod 644 /root/udp/config.json 2>/dev/null || true
 
 if [ -z "$1" ]; then
 cat <<EOF > /etc/systemd/system/udp-custom.service

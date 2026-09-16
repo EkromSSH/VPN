@@ -68,40 +68,70 @@ function is_root() {
         print_ok "Root user Start installation process"
     else
         print_error "The current user is not the root user, please switch to the root user and run the script again"
+        exit 1
     fi
-
 }
 
 ### Change Environment System
 function first_setup(){
-    timedatectl set-timezone Asia/Kuala_Lumpur
+    timedatectl set-timezone Asia/Kuala_Lumpur 2>/dev/null || true
     wget -O /etc/banner ${REPO}config/banner >/dev/null 2>&1
-    chmod +x /etc/banner
+    chmod +x /etc/banner 2>/dev/null || true
     wget -O /etc/ssh/sshd_config ${REPO}config/sshd_config >/dev/null 2>&1
-    chmod 644 /etc/ssh/sshd_config
+    chmod 644 /etc/ssh/sshd_config 2>/dev/null || true
 
-    echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
-    echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
-    
+    echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections 2>/dev/null || true
+    echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections 2>/dev/null || true
+
+    # Modern systemd / Ubuntu 22.10+ / 24.04: disable ssh.socket so ssh.service binds all ports
+    if systemctl is-active --quiet ssh.socket 2>/dev/null || systemctl is-enabled --quiet ssh.socket 2>/dev/null; then
+        systemctl stop ssh.socket 2>/dev/null || true
+        systemctl disable ssh.socket 2>/dev/null || true
+    fi
 }
 
 ### Update and remove packages
 function base_package() {
-    apt-get autoremove -y man-db apache2 ufw exim4 firewalld snapd* -y
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get autoremove -y man-db apache2 ufw exim4 firewalld 2>/dev/null || true
+    apt-get purge -y snapd 2>/dev/null || true
     clear
     print_install "Install the required packages"
-#    sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
-#    sysctl -w net.ipv6.conf.default.disable_ipv6=1  >/dev/null 2>&1
-    apt install software-properties-common -y
-    add-apt-repository ppa:vbernat/haproxy-2.7 -y
-    apt update && apt upgrade -y
-    # linux-tools-common util-linux gnupg gnupg2 gnupg1  \
-    sudo apt install squid nginx zip pwgen openssl netcat bash-completion  \
-    curl socat xz-utils wget apt-transport-https dnsutils socat \
-    tar wget curl ruby zip unzip p7zip-full python3-pip haproxy libc6  \
-    msmtp-mta ca-certificates bsd-mailx iptables iptables-persistent netfilter-persistent \
-    net-tools  jq openvpn easy-rsa python3-certbot-nginx p7zip-full tuned fail2ban vnstat -y
-    apt-get clean all; apt-get autoremove -y
+
+    apt-get update -y
+    apt-get install -y software-properties-common curl wget gnupg2 ca-certificates lsb-release
+
+    # Detect OS
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_NAME=$ID
+        OS_VER=$VERSION_ID
+    else
+        OS_NAME=$(lsb_release -si 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        OS_VER=$(lsb_release -sr 2>/dev/null)
+    fi
+
+    # Only add haproxy PPA on Ubuntu 18/20; Ubuntu 22+ and Debian have modern haproxy in main repo
+    if [ "$OS_NAME" = "ubuntu" ] && [ "${OS_VER%%.*}" -le 20 ] 2>/dev/null; then
+        add-apt-repository ppa:vbernat/haproxy-2.7 -y 2>/dev/null || true
+        apt-get update -y
+    fi
+
+    # Core required packages for all supported distros
+    apt-get install -y \
+        build-essential gcc make \
+        squid nginx zip unzip pwgen openssl bash-completion \
+        curl socat xz-utils wget dnsutils tar ruby p7zip-full \
+        haproxy libc6 ca-certificates iptables iptables-persistent netfilter-persistent \
+        net-tools jq openvpn easy-rsa python3 fail2ban vnstat
+
+    # Install netcat (netcat-openbsd works on Debian 10/11/12 & Ubuntu 20/22/24)
+    apt-get install -y netcat-openbsd 2>/dev/null || apt-get install -y netcat 2>/dev/null || true
+
+    # Optional utilities that differ slightly per distro
+    apt-get install -y tuned msmtp-mta bsd-mailx python3-certbot-nginx 2>/dev/null || true
+
+    apt-get clean all
     print_ok "Successfully installed the required package"
 }
 clear
@@ -165,12 +195,20 @@ function pasang_ssl() {
     systemctl stop nginx
     curl https://raw.githubusercontent.com/EkromSSH/VPN/main/acme.sh -o /root/.acme.sh/acme.sh
     chmod +x /root/.acme.sh/acme.sh
-    /root/.acme.sh/acme.sh --upgrade --auto-upgrade
-    /root/.acme.sh/acme.sh --set-default-ca --server zerossl
-    /root/.acme.sh/acme.sh --register-account -m admin@${domain} 2>/dev/null
-    /root/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256
-    ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc
-    chmod 777 /etc/xray/xray.key
+    /root/.acme.sh/acme.sh --upgrade --auto-upgrade 2>/dev/null || true
+    /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt 2>/dev/null || true
+    /root/.acme.sh/acme.sh --register-account -m admin@${domain} 2>/dev/null || true
+    /root/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256 2>/dev/null || true
+    ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc 2>/dev/null || true
+
+    # Self-signed certificate fallback if acme fails (prevents haproxy/xray crash)
+    if [ ! -s /etc/xray/xray.crt ] || [ ! -s /etc/xray/xray.key ]; then
+        openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+            -subj "/C=TH/ST=Bangkok/L=Bangkok/O=EKROM/OU=VPN/CN=${domain}" \
+            -keyout /etc/xray/xray.key -out /etc/xray/xray.crt 2>/dev/null || true
+    fi
+    chmod 777 /etc/xray/xray.key 2>/dev/null || true
+    chmod 644 /etc/xray/xray.crt 2>/dev/null || true
     print_success "SSL Certificate"
 }
 
@@ -261,15 +299,28 @@ function pasang_rclone() {
 function install_admin_panel() {
     print_install "Installing Admin Panel & Scripts"
     
-    # > Install PHP (auto-detect version)
-    add-apt-repository ppa:ondrej/php -y >/dev/null 2>&1
-    apt update -qq
-    apt install php8.1-fpm php8.1-cli -y 2>/dev/null || apt install php-fpm -y
+    # > Install PHP cleanly (without broken PPAs on Debian / Ubuntu 22/24)
+    if [ "$OS_NAME" = "ubuntu" ] && [ "${OS_VER%%.*}" -le 20 ] 2>/dev/null; then
+        add-apt-repository ppa:ondrej/php -y >/dev/null 2>&1 || true
+        apt-get update -qq
+    fi
+
+    apt-get install -y php-fpm php-cli php-common 2>/dev/null || \
+    apt-get install -y php8.3-fpm php8.3-cli 2>/dev/null || \
+    apt-get install -y php8.2-fpm php8.2-cli 2>/dev/null || \
+    apt-get install -y php8.1-fpm php8.1-cli 2>/dev/null || \
+    apt-get install -y php7.4-fpm php7.4-cli 2>/dev/null || true
     
-    # Detect PHP socket
-    PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "7.4")
-    systemctl enable php${PHP_VER}-fpm 2>/dev/null
-    systemctl start php${PHP_VER}-fpm 2>/dev/null
+    # Detect installed PHP version
+    PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null)
+    if [ -z "$PHP_VER" ]; then
+        PHP_VER=$(ls -d /etc/php/*/ 2>/dev/null | sort -V | tail -n 1 | cut -d'/' -f4)
+    fi
+    [ -z "$PHP_VER" ] && PHP_VER="8.1"
+
+    systemctl daemon-reload 2>/dev/null
+    systemctl enable php${PHP_VER}-fpm 2>/dev/null || systemctl enable php-fpm 2>/dev/null || true
+    systemctl restart php${PHP_VER}-fpm 2>/dev/null || systemctl restart php-fpm 2>/dev/null || true
     
     # > Download Admin Panel
     wget -O /var/www/admin/index.php "${REPO}admin/index.php" >/dev/null 2>&1
@@ -297,8 +348,13 @@ function install_admin_panel() {
     wget -O /etc/nginx/conf.d/admin.conf "${REPO}config/admin.conf" >/dev/null 2>&1
     wget -O /etc/nginx/conf.d/admin-redirect.conf "${REPO}config/admin-redirect.conf" >/dev/null 2>&1
 
-    # > Replace PHP socket in nginx config (หลัง wget admin.conf)
-    sed -i "s/PHP_SOCKET/php${PHP_VER}-fpm.sock/g" /etc/nginx/conf.d/admin.conf 2>/dev/null
+    # > Replace PHP socket in nginx config
+    ACTUAL_SOCK=$(ls /run/php/php*-fpm.sock /var/run/php/php*-fpm.sock 2>/dev/null | head -n 1 | xargs -n 1 basename 2>/dev/null)
+    if [ -n "$ACTUAL_SOCK" ]; then
+        sed -i "s/PHP_SOCKET/$ACTUAL_SOCK/g" /etc/nginx/conf.d/admin.conf 2>/dev/null
+    else
+        sed -i "s/PHP_SOCKET/php${PHP_VER}-fpm.sock/g" /etc/nginx/conf.d/admin.conf 2>/dev/null
+    fi
     
     # > Setup sudoers for www-data (admin panel user management)
     echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/ssh-admin" > /etc/sudoers.d/admin-panel
@@ -307,13 +363,14 @@ function install_admin_panel() {
     
     # > Compile su-exec wrapper (bypass PHP-FPM restrictions)
     wget -O /tmp/su-exec.c "${REPO}admin/su-exec.c" >/dev/null 2>&1
-    gcc -o /usr/local/bin/su-exec /tmp/su-exec.c 2>/dev/null
-    chown root:www-data /usr/local/bin/su-exec 2>/dev/null
-    chmod 4510 /usr/local/bin/su-exec 2>/dev/null
+    if command -v gcc >/dev/null 2>&1; then
+        gcc -o /usr/local/bin/su-exec /tmp/su-exec.c 2>/dev/null
+        chown root:www-data /usr/local/bin/su-exec 2>/dev/null
+        chmod 4510 /usr/local/bin/su-exec 2>/dev/null
+    fi
     rm -f /tmp/su-exec.c
     
     # > Fix PHP-FPM ProtectSystem (allows writing to /etc/)
-    PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "7.4")
     mkdir -p /etc/systemd/system/php${PHP_VER}-fpm.service.d
     cat > /etc/systemd/system/php${PHP_VER}-fpm.service.d/override.conf <<EOF
 [Service]
@@ -321,7 +378,7 @@ ProtectSystem=off
 ReadWritePaths=/etc /home /var/log /var/mail
 EOF
     systemctl daemon-reload 2>/dev/null
-    systemctl restart php${PHP_VER}-fpm 2>/dev/null
+    systemctl restart php${PHP_VER}-fpm 2>/dev/null || systemctl restart php-fpm 2>/dev/null || true
 
     # > กัน nginx + squid โดน OOM-kill (RAM น้อย) — restart อัตโนมัติ
     mkdir -p /etc/systemd/system/nginx.service.d /etc/systemd/system/squid.service.d
@@ -350,9 +407,16 @@ function install_udp_custom() {
     wget -O /root/udp.sh "${REPO}Tunnel/udp.sh" >/dev/null 2>&1
     chmod +x /root/udp.sh
     bash /root/udp.sh >/dev/null 2>&1
+
     # Change to port 53 (DNS - best for bypass)
-    systemctl stop systemd-resolved 2>/dev/null
-    systemctl disable systemd-resolved 2>/dev/null
+    # CRITICAL: Preserve resolv.conf before stopping systemd-resolved on Ubuntu 22.04 / 24.04
+    if [ -L /etc/resolv.conf ] || [ -f /etc/resolv.conf ]; then
+        rm -f /etc/resolv.conf 2>/dev/null || true
+        echo "nameserver 1.1.1.1" > /etc/resolv.conf
+        echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+    fi
+    systemctl stop systemd-resolved 2>/dev/null || true
+    systemctl disable systemd-resolved 2>/dev/null || true
     cat > /root/udp/config.json <<EOF
 {
   "listen": ":53",
@@ -579,23 +643,31 @@ NEVERMORESSH() {
 function enable_services(){
     print_install "Restart servis"
     systemctl daemon-reload
-    systemctl start netfilter-persistent
-    systemctl enable --now nginx
-    systemctl enable --now xray
-    systemctl enable --now rc-local
-    systemctl enable --now dropbear
-    systemctl enable --now openvpn
-    systemctl enable --now cron
-    systemctl enable --now haproxy
-    systemctl enable --now netfilter-persistent
-    systemctl enable --now squid
-    systemctl enable --now ws
-    systemctl enable --now client
-    systemctl enable --now server
-    systemctl enable --now fail2ban
-    systemctl enable --now ws-ssh
-    systemctl enable --now udp-custom
-    systemctl reload nginx
+    systemctl start netfilter-persistent 2>/dev/null || true
+    systemctl enable --now nginx 2>/dev/null || true
+    systemctl enable --now xray 2>/dev/null || true
+    systemctl enable --now rc-local 2>/dev/null || true
+    systemctl enable --now dropbear 2>/dev/null || true
+    systemctl enable --now openvpn 2>/dev/null || true
+    systemctl enable --now cron 2>/dev/null || true
+    systemctl enable --now haproxy 2>/dev/null || true
+    systemctl enable --now netfilter-persistent 2>/dev/null || true
+    systemctl enable --now squid 2>/dev/null || true
+    systemctl enable --now ws 2>/dev/null || true
+    systemctl enable --now client 2>/dev/null || true
+    systemctl enable --now server 2>/dev/null || true
+    systemctl enable --now fail2ban 2>/dev/null || true
+    systemctl enable --now udp-custom 2>/dev/null || true
+
+    # Handle modern OpenSSH on Ubuntu 22.10+, Ubuntu 24.04, Debian 12
+    if systemctl is-active --quiet ssh.socket 2>/dev/null || systemctl is-enabled --quiet ssh.socket 2>/dev/null; then
+        systemctl stop ssh.socket 2>/dev/null || true
+        systemctl disable ssh.socket 2>/dev/null || true
+    fi
+    systemctl enable --now ssh 2>/dev/null || systemctl enable --now sshd 2>/dev/null || true
+    systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
+
+    systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
     wget -O /root/.config/rclone/rclone.conf "${REPO}rclone/rclone.conf" >/dev/null 2>&1
 }
 
@@ -686,6 +758,7 @@ function finish(){
     # fi
 }
 cd /tmp
+is_root
 NEVERMORESSH
 first_setup
 dir_xray

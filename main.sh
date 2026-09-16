@@ -84,21 +84,46 @@ function first_setup(){
 
 ### Update and remove packages
 function base_package() {
-    sudo apt-get autoremove -y man-db apache2 ufw exim4 firewalld snapd* -y
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get autoremove -y man-db apache2 ufw exim4 firewalld 2>/dev/null || true
+    apt-get purge -y snapd 2>/dev/null || true
     clear
     print_install "Install the required packages"
-    sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
-    sysctl -w net.ipv6.conf.default.disable_ipv6=1  >/dev/null 2>&1
-    sudo apt install software-properties-common -y
-    sudo add-apt-repository ppa:vbernat/haproxy-2.7 -y
-    sudo apt update && apt upgrade -y
-    # linux-tools-common util-linux gnupg gnupg2 gnupg1  \
-    sudo apt install squid nginx zip pwgen openssl netcat bash-completion  \
-    curl socat xz-utils wget apt-transport-https dnsutils socat \
-    tar wget curl ruby zip unzip p7zip-full python3-pip haproxy libc6  \
-    msmtp-mta ca-certificates bsd-mailx iptables iptables-persistent netfilter-persistent \
-    net-tools  jq openvpn easy-rsa python3-certbot-nginx p7zip-full tuned fail2ban vnstat -y
-    apt-get clean all; sudo apt-get autoremove -y
+
+    apt-get update -y
+    apt-get install -y software-properties-common curl wget gnupg2 ca-certificates lsb-release
+
+    # Detect OS
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_NAME=$ID
+        OS_VER=$VERSION_ID
+    else
+        OS_NAME=$(lsb_release -si 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        OS_VER=$(lsb_release -sr 2>/dev/null)
+    fi
+
+    # Only add haproxy PPA on Ubuntu 18/20; Ubuntu 22+ and Debian have modern haproxy in main repo
+    if [ "$OS_NAME" = "ubuntu" ] && [ "${OS_VER%%.*}" -le 20 ] 2>/dev/null; then
+        add-apt-repository ppa:vbernat/haproxy-2.7 -y 2>/dev/null || true
+        apt-get update -y
+    fi
+
+    # Core required packages for all supported distros
+    apt-get install -y \
+        build-essential gcc make \
+        squid nginx zip unzip pwgen openssl bash-completion \
+        curl socat xz-utils wget dnsutils tar ruby p7zip-full \
+        haproxy libc6 ca-certificates iptables iptables-persistent netfilter-persistent \
+        net-tools jq openvpn easy-rsa python3 fail2ban vnstat
+
+    # Install netcat (netcat-openbsd works on Debian 10/11/12 & Ubuntu 20/22/24)
+    apt-get install -y netcat-openbsd 2>/dev/null || apt-get install -y netcat 2>/dev/null || true
+
+    # Optional utilities that differ slightly per distro
+    apt-get install -y tuned msmtp-mta bsd-mailx python3-certbot-nginx 2>/dev/null || true
+
+    apt-get clean all
     print_ok "Successfully installed the required package"
 }
 clear
@@ -162,9 +187,15 @@ function pasang_ssl() {
     chmod +x /root/.acme.sh/acme.sh
     /root/.acme.sh/acme.sh --upgrade --auto-upgrade
     /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-    /root/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256
-    ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc
-    chmod 777 /etc/xray/xray.key
+    ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc 2>/dev/null || true
+    # Self-signed certificate fallback if acme fails (prevents haproxy/xray crash)
+    if [ ! -s /etc/xray/xray.crt ] || [ ! -s /etc/xray/xray.key ]; then
+        openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+            -subj "/C=TH/ST=Bangkok/L=Bangkok/O=EKROM/OU=VPN/CN=${domain}" \
+            -keyout /etc/xray/xray.key -out /etc/xray/xray.crt 2>/dev/null || true
+    fi
+    chmod 777 /etc/xray/xray.key 2>/dev/null || true
+    chmod 644 /etc/xray/xray.crt 2>/dev/null || true
     print_success "SSL Certificate"
 }
 
@@ -173,12 +204,13 @@ function install_xray(){
     print_install "Installing the latest Xray module"
     curl -s ipinfo.io/city >> /etc/xray/city
     curl -s ipinfo.io/org | cut -d " " -f 2-10 >> /etc/xray/isp
-    xray_latest="$(curl -s https://api.github.com/repos/dharak36/Xray-core/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
-    xray_latest="$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | grep tag_name | cut -d\" -f4)"
-    xraycore_link="https://github.com/XTLS/Xray-core/releases/download/$xray_latest/Xray-linux-64.zip"
-    curl -sL "$xraycore_link" -o xray
-#    unzip -q xray.zip && rm -rf xray.zip
-    mv xray /usr/sbin/xray
+    # ดาวน์โหลดจาก repo ตรง (กันลิงก์เก่า 404 หรือ zip format error)
+    wget -O /usr/sbin/xray "${REPO}bin/xray" >/dev/null 2>&1
+    if [ ! -s /usr/sbin/xray ] || [ "$(stat -c%s /usr/sbin/xray 2>/dev/null)" -lt 1000000 ]; then
+        curl -sL "https://github.com/EkromSSH/Xcore-custompath/releases/download/Xray-linux-64-v1.6.5.1/Xray-linux-64-v1.6.5.1" -o xray 2>/dev/null
+        [ -s xray ] && mv xray /usr/sbin/xray
+    fi
+    chmod +x /usr/sbin/xray 2>/dev/null
     print_success "Xray Core"
     
     cat /etc/xray/xray.crt /etc/xray/xray.key | tee /etc/haproxy/xray.pem
@@ -516,20 +548,29 @@ NEVERMORESSH() {
 function enable_services(){
     print_install "Restart servis"
     systemctl daemon-reload
-    systemctl start netfilter-persistent
-    systemctl enable --now nginx
-    systemctl enable --now xray
-    systemctl enable --now rc-local
-    systemctl enable --now dropbear
-    systemctl enable --now openvpn
-    systemctl enable --now cron
-    systemctl enable --now haproxy
-    systemctl enable --now netfilter-persistent
-    systemctl enable --now squid
-    systemctl enable --now ws
-    systemctl enable --now client
-    systemctl enable --now server
-    systemctl enable --now fail2ban
+    systemctl start netfilter-persistent 2>/dev/null || true
+    systemctl enable --now nginx 2>/dev/null || true
+    systemctl enable --now xray 2>/dev/null || true
+    systemctl enable --now rc-local 2>/dev/null || true
+    systemctl enable --now dropbear 2>/dev/null || true
+    systemctl enable --now openvpn 2>/dev/null || true
+    systemctl enable --now cron 2>/dev/null || true
+    systemctl enable --now haproxy 2>/dev/null || true
+    systemctl enable --now netfilter-persistent 2>/dev/null || true
+    systemctl enable --now squid 2>/dev/null || true
+    systemctl enable --now ws 2>/dev/null || true
+    systemctl enable --now client 2>/dev/null || true
+    systemctl enable --now server 2>/dev/null || true
+    systemctl enable --now fail2ban 2>/dev/null || true
+
+    # Modern OpenSSH service (Ubuntu 22.10+, Ubuntu 24.04, Debian 12)
+    if systemctl is-active --quiet ssh.socket 2>/dev/null || systemctl is-enabled --quiet ssh.socket 2>/dev/null; then
+        systemctl stop ssh.socket 2>/dev/null || true
+        systemctl disable ssh.socket 2>/dev/null || true
+    fi
+    systemctl enable --now ssh 2>/dev/null || systemctl enable --now sshd 2>/dev/null || true
+    systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
+
     wget -O /root/.config/rclone/rclone.conf "${REPO}rclone/rclone.conf" >/dev/null 2>&1
 }
 
@@ -617,6 +658,7 @@ function finish(){
     # fi
 }
 cd /tmp
+is_root
 NEVERMORESSH
 first_setup
 dir_xray
