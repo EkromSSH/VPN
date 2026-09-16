@@ -16,11 +16,13 @@ set_quota() {
   local u="$1" gb="$2"
   [ -z "$gb" ] && gb=0
   [ "$gb" -eq 0 ] 2>/dev/null && return 0
-  local uid_num=$(id -u "$u")
+  local uid_num
+  uid_num=$(id -u "$u" 2>/dev/null)
+  [ -z "$uid_num" ] && return 0
   local bytes=$((gb * 1024 * 1024 * 1024))
   del_quota_rules "$uid_num"
-  iptables -I OUTPUT -m owner --uid-owner "$uid_num" -m quota --quota "$bytes" -j ACCEPT
-  iptables -I OUTPUT -m owner --uid-owner "$uid_num" -j REJECT
+  iptables -I OUTPUT -m owner --uid-owner "$uid_num" -m quota --quota "$bytes" -j ACCEPT 2>/dev/null || true
+  iptables -I OUTPUT -m owner --uid-owner "$uid_num" -j REJECT 2>/dev/null || true
 }
 
 case "$1" in
@@ -57,14 +59,37 @@ case "$1" in
         # renew <user> <days> [gb] [maxip] — -1 หรือไม่ระบุ = ใช้ค่าเดิมจาก db
         OLD_GB=$(grep "^### $2 " /etc/ssh/.ssh.db 2>/dev/null | awk '{print $4}')
         OLD_IP=$(grep "^### $2 " /etc/ssh/.ssh.db 2>/dev/null | awk '{print $5}')
+        OLD_EXP=$(grep "^### $2 " /etc/ssh/.ssh.db 2>/dev/null | awk '{print $3}')
         [ -z "$OLD_GB" ] && OLD_GB=0
         [ -z "$OLD_IP" ] && OLD_IP=0
         NEW_GB="${4:-$OLD_GB}"; [ "$NEW_GB" = "-1" ] && NEW_GB="$OLD_GB"
         NEW_IP="${5:-$OLD_IP}"; [ "$NEW_IP" = "-1" ] && NEW_IP="$OLD_IP"
-        /usr/sbin/usermod -e $(date -d "+$3 days" +%Y-%m-%d) "$2" 2>/dev/null
-        EXP_TS=$(date -d "+$3 days" +%s)
+
+        NOW_TS=$(date +%s)
+        if [ -n "$OLD_EXP" ] && [ "$OLD_EXP" -gt "$NOW_TS" ]; then
+            EXP_TS=$((OLD_EXP + $3 * 86400))
+        else
+            EXP_TS=$(date -d "+$3 days" +%s)
+        fi
+        EXP_DATE=$(date -d "@$EXP_TS" +%Y-%m-%d 2>/dev/null || date -d "+$3 days" +%Y-%m-%d)
+        /usr/sbin/usermod -e "$EXP_DATE" "$2" 2>/dev/null
         sed -i "/^### $2 /d" /etc/ssh/.ssh.db 2>/dev/null
         echo "### $2 $EXP_TS $NEW_GB $NEW_IP" >> /etc/ssh/.ssh.db
+        if [ -n "$NEW_GB" ] && [ "$NEW_GB" != "0" ]; then
+            set_quota "$2" "$NEW_GB"
+        else
+            del_quota_rules "$(id -u "$2" 2>/dev/null)"
+        fi
+        echo "OK"
+        ;;
+    limit)
+        # limit <user> <gb> <maxip>
+        OLD_EXP=$(grep "^### $2 " /etc/ssh/.ssh.db 2>/dev/null | awk '{print $3}')
+        [ -z "$OLD_EXP" ] && OLD_EXP=$(date -d "+30 days" +%s)
+        NEW_GB="${3:-0}"
+        NEW_IP="${4:-0}"
+        sed -i "/^### $2 /d" /etc/ssh/.ssh.db 2>/dev/null
+        echo "### $2 $OLD_EXP $NEW_GB $NEW_IP" >> /etc/ssh/.ssh.db
         if [ -n "$NEW_GB" ] && [ "$NEW_GB" != "0" ]; then
             set_quota "$2" "$NEW_GB"
         else

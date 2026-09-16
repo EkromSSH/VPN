@@ -204,9 +204,28 @@ if (!empty($action)) {
         $ret = 0;
         exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin renew " . escapeshellarg($u) . " $d $g $mip 2>&1", $out, $ret);
         if ($ret === 0) {
-            $isAjax ? json_resp(["status" => "success", "message" => "ต่ออายุบัญชี $u เพิ่ม $d วัน สำเร็จ!"]) : header("Location: /?msg=renew_" . urlencode($u));
+            $extraTxt = "";
+            if ($g >= 0) $extraTxt .= " (เน็ต: " . ($g > 0 ? "$g GB" : "ไม่จำกัด") . ")";
+            if ($mip >= 0) $extraTxt .= " (ลิมิต: " . ($mip > 0 ? "$mip เครื่อง" : "ไม่จำกัด") . ")";
+            $isAjax ? json_resp(["status" => "success", "message" => "ต่ออายุบัญชี $u เพิ่ม $d วัน$extraTxt เรียบร้อย!"]) : header("Location: /?msg=renew_" . urlencode($u));
         } else {
             $isAjax ? json_resp(["status" => "error", "message" => "ต่ออายุไม่สำเร็จ"]) : header("Location: /?msg=fail");
+        }
+    }
+
+    // 4.1 แก้ไขโควต้า GB และ ลิมิต IP
+    if ($action === "limit" && !empty($u)) {
+        $g = max(0, intval($_POST["gb"] ?? $_GET["gb"] ?? 0));
+        $mip = max(0, intval($_POST["ip"] ?? $_GET["ip"] ?? 0));
+        $out = [];
+        $ret = 0;
+        exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin limit " . escapeshellarg($u) . " $g $mip 2>&1", $out, $ret);
+        if ($ret === 0) {
+            $gbTxt = $g > 0 ? "$g GB" : "ไม่จำกัด";
+            $ipTxt = $mip > 0 ? "$mip เครื่อง" : "ไม่จำกัด";
+            $isAjax ? json_resp(["status" => "success", "message" => "อัปเดตลิมิตบัญชี $u เป็น (เน็ต: $gbTxt / เครื่อง: $ipTxt) เรียบร้อย!"]) : header("Location: /?msg=limit_ok");
+        } else {
+            $isAjax ? json_resp(["status" => "error", "message" => "อัปเดตลิมิตไม่สำเร็จ"]) : header("Location: /?msg=fail");
         }
     }
 
@@ -534,11 +553,15 @@ $onlineMap = array_flip($ol);
                     <p class="text-xs text-slate-500 mt-0.5">จัดการ ต่ออายุ แก้ไขรหัสผ่าน หรือลบบัญชี (กดจากปุ่มด่วนด้านขวา หรือกดที่การ์ดลูกค้าได้ทันที)</p>
                 </div>
 
-                <!-- เมนูปุ่มด่วน 3 ปุ่มเด่นชัด -->
+                <!-- เมนูปุ่มด่วน 4 ปุ่มเด่นชัด -->
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="openQuickRenewModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow flex items-center gap-1.5 transition-all cursor-pointer">
                         <i class="fa-solid fa-calendar-plus text-xs"></i>
                         <span>➕ ต่ออายุผู้ใช้</span>
+                    </button>
+                    <button onclick="openQuickLimitModal()" class="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow flex items-center gap-1.5 transition-all cursor-pointer">
+                        <i class="fa-solid fa-sliders text-xs"></i>
+                        <span>⚙️ ปรับลิมิต (GB/IP)</span>
                     </button>
                     <button onclick="openQuickPasswdModal()" class="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded-xl border border-purple-200 flex items-center gap-1.5 transition-all cursor-pointer">
                         <i class="fa-solid fa-key text-purple-600"></i>
@@ -659,15 +682,22 @@ $onlineMap = array_flip($ol);
                         
                         <!-- ➕ ปุ่มต่ออายุ สีเขียวเด่นสะดุดตา มีชื่อปุ่มบอกชัดเจน -->
                         <button onclick="openRenewModal('<?= htmlspecialchars($uName) ?>', <?= $info['limit_gb'] ?>, <?= $info['limit_ip'] ?>)"
-                            class="flex-1 py-2 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-                            <i class="fa-solid fa-calendar-plus text-sm"></i>
-                            <span>➕ ต่ออายุ (+30 วัน)</span>
+                            class="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                            <i class="fa-solid fa-calendar-plus text-xs"></i>
+                            <span>➕ ต่ออายุ</span>
+                        </button>
+
+                        <!-- ⚙️ ปุ่มปรับลิมิตเน็ต / IP -->
+                        <button onclick="openLimitModal('<?= htmlspecialchars($uName) ?>', <?= $info['limit_gb'] ?>, <?= $info['limit_ip'] ?>)"
+                            class="py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-xs font-bold border border-purple-200 flex items-center gap-1.5 transition-all cursor-pointer" title="ปรับเน็ต GB / ลิมิต IP">
+                            <i class="fa-solid fa-sliders text-xs"></i>
+                            <span>⚙️ ลิมิต</span>
                         </button>
 
                         <!-- 📋 ปุ่มคัดลอกส่งลูกค้า -->
                         <button onclick="copyCustomerFormat('<?= htmlspecialchars($uName) ?>', '******', '<?= date('Y-m-d', $expTs) ?>', '<?= $gbLabel ?>', '<?= $ipLabel ?>')"
                             class="py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold border border-blue-200 flex items-center gap-1.5 transition-all cursor-pointer" title="คัดลอกข้อมูลส่งลูกค้า">
-                            <i class="fa-solid fa-share-nodes"></i>
+                            <i class="fa-solid fa-share-nodes text-xs"></i>
                             <span>ส่งลูกค้า</span>
                         </button>
 
@@ -745,10 +775,13 @@ $onlineMap = array_flip($ol);
                             <td class="px-4 py-3.5 font-mono text-xs"><?= date("Y-m-d", $expTs) ?> (<?= $remTextT ?>)</td>
                             <td class="px-4 py-3.5 text-center">
                                 <div class="flex items-center justify-center gap-1.5">
-                                    <button onclick="openRenewModal('<?= htmlspecialchars($uName) ?>', <?= $info['limit_gb'] ?>, <?= $info['limit_ip'] ?>)" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1">
-                                        <i class="fa-solid fa-calendar-plus"></i> <span>ต่ออายุ</span>
+                                    <button onclick="openRenewModal('<?= htmlspecialchars($uName) ?>', <?= $info['limit_gb'] ?>, <?= $info['limit_ip'] ?>)" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1" title="ต่ออายุ">
+                                        <i class="fa-solid fa-calendar-plus text-xs"></i> <span>ต่ออายุ</span>
                                     </button>
-                                    <button onclick="copyCustomerFormat('<?= htmlspecialchars($uName) ?>', '******', '<?= date('Y-m-d', $expTs) ?>', '<?= $gbLabel ?>', '<?= $ipLabel ?>')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold border border-blue-200">
+                                    <button onclick="openLimitModal('<?= htmlspecialchars($uName) ?>', <?= $info['limit_gb'] ?>, <?= $info['limit_ip'] ?>)" class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-bold border border-purple-200 flex items-center gap-1" title="ปรับลิมิตเน็ต/IP">
+                                        <i class="fa-solid fa-sliders text-xs"></i> <span>ลิมิต</span>
+                                    </button>
+                                    <button onclick="copyCustomerFormat('<?= htmlspecialchars($uName) ?>', '******', '<?= date('Y-m-d', $expTs) ?>', '<?= $gbLabel ?>', '<?= $ipLabel ?>')" class="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold border border-blue-200" title="ส่งลูกค้า">
                                         ส่งลูกค้า
                                     </button>
                                     <button onclick="openPasswdModal('<?= htmlspecialchars($uName) ?>')" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs border border-slate-200">
@@ -922,36 +955,79 @@ ${escapeHtml(customerText)}
                 });
         }
 
+        // ฟังก์ชันช่วยบวก GB
+        function addGbValue(inputId, amount) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            let val = parseInt(el.value) || 0;
+            el.value = Math.max(0, val + amount);
+        }
+
         // เมนูด่วน: ➕ ต่ออายุผู้ใช้ (Quick Renew Modal)
         function openQuickRenewModal() {
             let optionsHtml = '';
+            let firstUser = '';
             for (const [u, info] of Object.entries(window.USERS_DATA || {})) {
+                if (!firstUser) firstUser = u;
                 const expDate = new Date(info.exp_ts * 1000).toISOString().split('T')[0];
-                optionsHtml += `<option value="${escapeHtml(u)}">${escapeHtml(u)} (หมดอายุ: ${expDate})</option>`;
+                optionsHtml += `<option value="${escapeHtml(u)}" data-gb="${info.limit_gb}" data-ip="${info.limit_ip}">${escapeHtml(u)} (หมดอายุ: ${expDate})</option>`;
             }
             if (!optionsHtml) {
                 Swal.fire({ icon: 'info', title: 'ยังไม่มีบัญชี', text: 'กรุณาสร้างบัญชี SSH ก่อนต่ออายุครับ' });
                 return;
             }
+            const initialGb = window.USERS_DATA[firstUser] ? window.USERS_DATA[firstUser].limit_gb : 0;
+            const initialIp = window.USERS_DATA[firstUser] ? window.USERS_DATA[firstUser].limit_ip : 0;
+
             Swal.fire({
                 title: '➕ ต่ออายุการใช้งาน',
                 html: `
                     <div class="text-left space-y-3.5 text-xs p-1">
                         <div>
                             <label class="block font-bold text-slate-800 mb-1.5">เลือกบัญชีที่ต้องการต่ออายุ:</label>
-                            <select id="swal-quick-user" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm">
+                            <select id="swal-quick-user" onchange="onQuickRenewUserChange(this)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm">
                                 ${optionsHtml}
                             </select>
                         </div>
                         <div>
                             <label class="block font-bold text-slate-800 mb-1.5">เพิ่มจำนวนวันใช้งาน:</label>
-                            <input id="swal-quick-days" type="number" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="30">
+                            <input id="swal-quick-days" type="number" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="30">
                             <div class="flex gap-1.5 mt-2 flex-wrap">
                                 <button type="button" onclick="document.getElementById('swal-quick-days').value=7" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs cursor-pointer">7 วัน</button>
                                 <button type="button" onclick="document.getElementById('swal-quick-days').value=30" class="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold rounded-lg text-xs cursor-pointer">30 วัน (1 เดือน) ⭐</button>
                                 <button type="button" onclick="document.getElementById('swal-quick-days').value=60" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs cursor-pointer">60 วัน</button>
                                 <button type="button" onclick="document.getElementById('swal-quick-days').value=90" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs cursor-pointer">90 วัน</button>
                                 <button type="button" onclick="document.getElementById('swal-quick-days').value=365" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs cursor-pointer">1 ปี</button>
+                            </div>
+                        </div>
+
+                        <!-- ปรับโควต้าเน็ต GB -->
+                        <div class="bg-purple-50/60 p-3 rounded-xl border border-purple-200">
+                            <label class="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                                <i class="fa-solid fa-database text-purple-600"></i>
+                                <span>ปรับโควต้าเน็ต (GB):</span>
+                            </label>
+                            <input id="swal-quick-renew-gb" type="number" min="0" class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="${initialGb}">
+                            <div class="flex gap-1.5 mt-2 flex-wrap">
+                                <button type="button" onclick="addGbValue('swal-quick-renew-gb', 10)" class="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg text-xs font-bold cursor-pointer">+10 GB</button>
+                                <button type="button" onclick="addGbValue('swal-quick-renew-gb', 50)" class="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg text-xs font-bold cursor-pointer">+50 GB</button>
+                                <button type="button" onclick="addGbValue('swal-quick-renew-gb', 100)" class="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg text-xs font-bold cursor-pointer">+100 GB</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-renew-gb').value=0" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">0 (ไม่จำกัด)</button>
+                            </div>
+                        </div>
+
+                        <!-- ลิมิต IP -->
+                        <div class="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
+                            <label class="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                                <i class="fa-solid fa-mobile-screen text-amber-600"></i>
+                                <span>จำกัด IP (เครื่อง/จอ):</span>
+                            </label>
+                            <input id="swal-quick-renew-ip" type="number" min="0" class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="${initialIp}">
+                            <div class="flex gap-1.5 mt-2 flex-wrap">
+                                <button type="button" onclick="document.getElementById('swal-quick-renew-ip').value=1" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">1 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-renew-ip').value=2" class="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-xs cursor-pointer">2 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-renew-ip').value=3" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">3 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-renew-ip').value=0" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">0 (ไม่จำกัด)</button>
                             </div>
                         </div>
                     </div>
@@ -964,11 +1040,13 @@ ${escapeHtml(customerText)}
                 preConfirm: () => {
                     const u = document.getElementById('swal-quick-user').value;
                     const d = document.getElementById('swal-quick-days').value;
+                    const g = document.getElementById('swal-quick-renew-gb').value;
+                    const ip = document.getElementById('swal-quick-renew-ip').value;
                     if (!u || !d || Number(d) < 1) {
                         Swal.showValidationMessage('กรุณาเลือกบัญชีและระบุจำนวนวัน');
                         return false;
                     }
-                    return { user: u, days: d };
+                    return { user: u, days: d, gb: g, ip: ip };
                 }
             }).then(res => {
                 if (res.isConfirmed) {
@@ -977,9 +1055,130 @@ ${escapeHtml(customerText)}
                     fd.append("ajax", "1");
                     fd.append("user", res.value.user);
                     fd.append("days", res.value.days);
+                    fd.append("gb", res.value.gb);
+                    fd.append("ip", res.value.ip);
                     postApiAction(fd, `ต่ออายุบัญชี ${res.value.user} เพิ่ม ${res.value.days} วัน เรียบร้อยแล้ว!`);
                 }
             });
+        }
+
+        function onQuickRenewUserChange(selectEl) {
+            const opt = selectEl.options[selectEl.selectedIndex];
+            if (opt) {
+                const gb = opt.getAttribute('data-gb') || '0';
+                const ip = opt.getAttribute('data-ip') || '0';
+                const gbInput = document.getElementById('swal-quick-renew-gb');
+                const ipInput = document.getElementById('swal-quick-renew-ip');
+                if (gbInput) gbInput.value = gb;
+                if (ipInput) ipInput.value = ip;
+            }
+        }
+
+        // เมนูด่วน: ⚙️ ปรับลิมิตผู้ใช้ (Quick Limit Modal)
+        function openQuickLimitModal() {
+            let optionsHtml = '';
+            let firstUser = '';
+            for (const [u, info] of Object.entries(window.USERS_DATA || {})) {
+                if (!firstUser) firstUser = u;
+                const gbTxt = info.limit_gb > 0 ? `${info.limit_gb} GB` : 'ไม่จำกัด';
+                const ipTxt = info.limit_ip > 0 ? `${info.limit_ip} จอ` : 'ไม่จำกัด';
+                optionsHtml += `<option value="${escapeHtml(u)}" data-gb="${info.limit_gb}" data-ip="${info.limit_ip}">${escapeHtml(u)} (${gbTxt} / ${ipTxt})</option>`;
+            }
+            if (!optionsHtml) {
+                Swal.fire({ icon: 'info', title: 'ยังไม่มีบัญชี', text: 'กรุณาสร้างบัญชี SSH ก่อนปรับลิมิตครับ' });
+                return;
+            }
+
+            const initialGb = window.USERS_DATA[firstUser] ? window.USERS_DATA[firstUser].limit_gb : 0;
+            const initialIp = window.USERS_DATA[firstUser] ? window.USERS_DATA[firstUser].limit_ip : 0;
+
+            Swal.fire({
+                title: '⚙️ ปรับลิมิตโควต้า GB และ IP',
+                html: `
+                    <div class="text-left space-y-3.5 text-xs p-1">
+                        <div>
+                            <label class="block font-bold text-slate-800 mb-1.5">เลือกบัญชีที่ต้องการปรับ:</label>
+                            <select id="swal-quick-limit-user" onchange="onQuickLimitUserChange(this)" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm">
+                                ${optionsHtml}
+                            </select>
+                        </div>
+
+                        <!-- โควต้าเน็ต GB -->
+                        <div class="bg-purple-50/60 p-3 rounded-xl border border-purple-200">
+                            <label class="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                                <i class="fa-solid fa-database text-purple-600"></i>
+                                <span>โควต้าปริมาณเน็ต (GB):</span>
+                            </label>
+                            <input id="swal-quick-limit-gb" type="number" min="0" class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="${initialGb}">
+                            <div class="flex gap-1.5 mt-2 flex-wrap">
+                                <button type="button" onclick="addGbValue('swal-quick-limit-gb', 10)" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer">+10 GB</button>
+                                <button type="button" onclick="addGbValue('swal-quick-limit-gb', 20)" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer">+20 GB</button>
+                                <button type="button" onclick="addGbValue('swal-quick-limit-gb', 50)" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer">+50 GB</button>
+                                <button type="button" onclick="addGbValue('swal-quick-limit-gb', 100)" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer">+100 GB</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-limit-gb').value=200" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">200 GB</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-limit-gb').value=0" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">0 (ไม่จำกัด)</button>
+                            </div>
+                        </div>
+
+                        <!-- ลิมิต IP -->
+                        <div class="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
+                            <label class="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                                <i class="fa-solid fa-mobile-screen text-amber-600"></i>
+                                <span>จำกัดจำนวน IP (เครื่อง/จอ):</span>
+                            </label>
+                            <input id="swal-quick-limit-ip" type="number" min="0" class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="${initialIp}">
+                            <div class="flex gap-1.5 mt-2 flex-wrap">
+                                <button type="button" onclick="document.getElementById('swal-quick-limit-ip').value=1" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">1 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-limit-ip').value=2" class="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-xs cursor-pointer">2 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-limit-ip').value=3" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">3 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-limit-ip').value=5" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">5 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-quick-limit-ip').value=0" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">0 (ไม่จำกัด)</button>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '💾 ยืนยันบันทึก',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#7c3aed',
+                cancelButtonColor: '#64748b',
+                preConfirm: () => {
+                    const u = document.getElementById('swal-quick-limit-user').value;
+                    const g = document.getElementById('swal-quick-limit-gb').value;
+                    const ip = document.getElementById('swal-quick-limit-ip').value;
+                    if (!u) {
+                        Swal.showValidationMessage('กรุณาเลือกบัญชีผู้ใช้');
+                        return false;
+                    }
+                    return {
+                        user: u,
+                        gb: Math.max(0, parseInt(g) || 0),
+                        ip: Math.max(0, parseInt(ip) || 0)
+                    };
+                }
+            }).then(res => {
+                if (res.isConfirmed) {
+                    const fd = new FormData();
+                    fd.append("action", "limit");
+                    fd.append("ajax", "1");
+                    fd.append("user", res.value.user);
+                    fd.append("gb", res.value.gb);
+                    fd.append("ip", res.value.ip);
+                    postApiAction(fd, `อัปเดตลิมิตบัญชี ${res.value.user} สำเร็จ!`);
+                }
+            });
+        }
+
+        function onQuickLimitUserChange(selectEl) {
+            const opt = selectEl.options[selectEl.selectedIndex];
+            if (opt) {
+                const gb = opt.getAttribute('data-gb') || '0';
+                const ip = opt.getAttribute('data-ip') || '0';
+                const gbInput = document.getElementById('swal-quick-limit-gb');
+                const ipInput = document.getElementById('swal-quick-limit-ip');
+                if (gbInput) gbInput.value = gb;
+                if (ipInput) ipInput.value = ip;
+            }
         }
 
         // เมนูด่วน: 🔑 เปลี่ยนรหัสผ่านด่วน (Quick Password Modal)
@@ -1077,18 +1276,65 @@ ${escapeHtml(customerText)}
 
         // หน้าต่างต่ออายุ (Renew จากการ์ดของคนนั้นๆ)
         function openRenewModal(user, currentGb, currentIp) {
+            currentGb = currentGb !== undefined ? parseInt(currentGb) : 0;
+            currentIp = currentIp !== undefined ? parseInt(currentIp) : 0;
+            const currentGbText = currentGb > 0 ? `${currentGb} GB` : 'ไม่จำกัด';
+            const currentIpText = currentIp > 0 ? `${currentIp} เครื่อง` : 'ไม่จำกัด';
+
             Swal.fire({
-                title: `➕ ต่ออายุบัญชี: ${escapeHtml(user)}`,
+                title: `➕ ต่ออายุบัญชี: <span class="text-blue-600 font-mono">${escapeHtml(user)}</span>`,
                 html: `
                     <div class="text-left space-y-3.5 text-xs p-1">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1.5">เพิ่มจำนวนวันใช้งาน:</label>
-                            <input id="swal-renew-days" type="number" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="30">
+                        <!-- จำนวนวัน -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <label class="block font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                                <i class="fa-regular fa-clock text-blue-600"></i>
+                                <span>เพิ่มจำนวนวันใช้งาน:</span>
+                            </label>
+                            <input id="swal-renew-days" type="number" min="1" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="30">
                             <div class="flex gap-1.5 mt-2 flex-wrap">
-                                <button type="button" onclick="document.getElementById('swal-renew-days').value=7" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs cursor-pointer">7 วัน</button>
+                                <button type="button" onclick="document.getElementById('swal-renew-days').value=7" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 text-xs cursor-pointer">7 วัน</button>
                                 <button type="button" onclick="document.getElementById('swal-renew-days').value=30" class="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold rounded-lg text-xs cursor-pointer">30 วัน ⭐</button>
-                                <button type="button" onclick="document.getElementById('swal-renew-days').value=60" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs cursor-pointer">60 วัน</button>
-                                <button type="button" onclick="document.getElementById('swal-renew-days').value=365" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs cursor-pointer">1 ปี</button>
+                                <button type="button" onclick="document.getElementById('swal-renew-days').value=60" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 text-xs cursor-pointer">60 วัน</button>
+                                <button type="button" onclick="document.getElementById('swal-renew-days').value=90" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 text-xs cursor-pointer">90 วัน</button>
+                                <button type="button" onclick="document.getElementById('swal-renew-days').value=365" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 text-xs cursor-pointer">1 ปี</button>
+                            </div>
+                        </div>
+
+                        <!-- ปรับโควต้าเน็ต GB -->
+                        <div class="bg-purple-50/60 p-3 rounded-xl border border-purple-200">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block font-bold text-slate-800 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-database text-purple-600"></i>
+                                    <span>โควต้าเน็ต (GB):</span>
+                                </label>
+                                <span class="text-xs text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-md">ปัจจุบัน: ${currentGbText}</span>
+                            </div>
+                            <input id="swal-renew-gb" type="number" min="0" class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="${currentGb}">
+                            <div class="flex gap-1.5 mt-2 flex-wrap">
+                                <button type="button" onclick="addGbValue('swal-renew-gb', 10)" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer">+10 GB</button>
+                                <button type="button" onclick="addGbValue('swal-renew-gb', 20)" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer">+20 GB</button>
+                                <button type="button" onclick="addGbValue('swal-renew-gb', 50)" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer">+50 GB</button>
+                                <button type="button" onclick="addGbValue('swal-renew-gb', 100)" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer">+100 GB</button>
+                                <button type="button" onclick="document.getElementById('swal-renew-gb').value=0" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">0 (ไม่จำกัด)</button>
+                            </div>
+                        </div>
+
+                        <!-- ปรับลิมิต IP -->
+                        <div class="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block font-bold text-slate-800 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-mobile-screen text-amber-600"></i>
+                                    <span>ลิมิต IP (จำนวนอุปกรณ์):</span>
+                                </label>
+                                <span class="text-xs text-amber-700 font-bold bg-amber-100 px-2 py-0.5 rounded-md">ปัจจุบัน: ${currentIpText}</span>
+                            </div>
+                            <input id="swal-renew-ip" type="number" min="0" class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm" value="${currentIp}">
+                            <div class="flex gap-1.5 mt-2 flex-wrap">
+                                <button type="button" onclick="document.getElementById('swal-renew-ip').value=1" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">1 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-renew-ip').value=2" class="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-xs cursor-pointer">2 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-renew-ip').value=3" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">3 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-renew-ip').value=0" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">0 (ไม่จำกัด)</button>
                             </div>
                         </div>
                     </div>
@@ -1100,11 +1346,17 @@ ${escapeHtml(customerText)}
                 cancelButtonColor: '#64748b',
                 preConfirm: () => {
                     const d = document.getElementById("swal-renew-days").value;
+                    const g = document.getElementById("swal-renew-gb").value;
+                    const ip = document.getElementById("swal-renew-ip").value;
                     if (!d || Number(d) < 1) {
                         Swal.showValidationMessage("กรุณาระบุจำนวนวัน");
                         return false;
                     }
-                    return d;
+                    return {
+                        days: parseInt(d),
+                        gb: Math.max(0, parseInt(g) || 0),
+                        ip: Math.max(0, parseInt(ip) || 0)
+                    };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -1112,8 +1364,89 @@ ${escapeHtml(customerText)}
                     fd.append("action", "renew");
                     fd.append("ajax", "1");
                     fd.append("user", user);
-                    fd.append("days", result.value);
-                    postApiAction(fd, `ต่ออายุบัญชี ${user} เรียบร้อยแล้ว!`);
+                    fd.append("days", result.value.days);
+                    fd.append("gb", result.value.gb);
+                    fd.append("ip", result.value.ip);
+                    postApiAction(fd, `ต่ออายุและอัปเดตลิมิตบัญชี ${user} เรียบร้อยแล้ว!`);
+                }
+            });
+        }
+
+        // หน้าต่างปรับเฉพาะโควต้า GB และลิมิต IP (ไม่เปลี่ยนวันหมดอายุ)
+        function openLimitModal(user, currentGb, currentIp) {
+            currentGb = currentGb !== undefined ? parseInt(currentGb) : 0;
+            currentIp = currentIp !== undefined ? parseInt(currentIp) : 0;
+            const currentGbText = currentGb > 0 ? `${currentGb} GB` : 'ไม่จำกัด';
+            const currentIpText = currentIp > 0 ? `${currentIp} เครื่อง` : 'ไม่จำกัด';
+
+            Swal.fire({
+                title: `⚙️ ปรับลิมิต: <span class="text-blue-600 font-mono">${escapeHtml(user)}</span>`,
+                html: `
+                    <div class="text-left space-y-4 text-xs p-1">
+                        <!-- โควต้าเน็ต GB -->
+                        <div class="bg-purple-50/60 p-3.5 rounded-xl border border-purple-200">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block font-bold text-slate-800 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-database text-purple-600"></i>
+                                    <span>โควต้าปริมาณเน็ต (GB):</span>
+                                </label>
+                                <span class="text-xs text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-md">ปัจจุบัน: ${currentGbText}</span>
+                            </div>
+                            <input id="swal-limit-gb" type="number" min="0" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm focus:border-purple-600 focus:outline-none" value="${currentGb}">
+                            <div class="flex gap-1.5 mt-2 flex-wrap">
+                                <button type="button" onclick="addGbValue('swal-limit-gb', 10)" class="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-xs">+10 GB</button>
+                                <button type="button" onclick="addGbValue('swal-limit-gb', 20)" class="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-xs">+20 GB</button>
+                                <button type="button" onclick="addGbValue('swal-limit-gb', 50)" class="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-xs">+50 GB</button>
+                                <button type="button" onclick="addGbValue('swal-limit-gb', 100)" class="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-xs">+100 GB</button>
+                                <button type="button" onclick="document.getElementById('swal-limit-gb').value=200" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">200 GB</button>
+                                <button type="button" onclick="document.getElementById('swal-limit-gb').value=0" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">0 (ไม่จำกัด)</button>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1.5">💡 กดปุ่ม +GB เพื่อเพิ่มเน็ตให้ลูกค้า หรือระบุตัวเลขใหม่โดยตรง (0 = ไม่จำกัดเน็ต)</p>
+                        </div>
+
+                        <!-- ลิมิต IP -->
+                        <div class="bg-amber-50/60 p-3.5 rounded-xl border border-amber-200">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block font-bold text-slate-800 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-mobile-screen text-amber-600"></i>
+                                    <span>จำกัดจำนวน IP (เครื่อง/จอ):</span>
+                                </label>
+                                <span class="text-xs text-amber-700 font-bold bg-amber-100 px-2 py-0.5 rounded-md">ปัจจุบัน: ${currentIpText}</span>
+                            </div>
+                            <input id="swal-limit-ip" type="number" min="0" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-sm focus:border-amber-600 focus:outline-none" value="${currentIp}">
+                            <div class="flex gap-1.5 mt-2 flex-wrap">
+                                <button type="button" onclick="document.getElementById('swal-limit-ip').value=1" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-medium cursor-pointer">1 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-limit-ip').value=2" class="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-xs cursor-pointer">2 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-limit-ip').value=3" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-medium cursor-pointer">3 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-limit-ip').value=5" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-medium cursor-pointer">5 เครื่อง</button>
+                                <button type="button" onclick="document.getElementById('swal-limit-ip').value=0" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs cursor-pointer">0 (ไม่จำกัด)</button>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1.5">💡 จำนวนอุปกรณ์ที่อนุญาตให้ล็อกอินพร้อมกัน (0 = ไม่จำกัด)</p>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '💾 บันทึกการเปลี่ยนแปลง',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#7c3aed',
+                cancelButtonColor: '#64748b',
+                preConfirm: () => {
+                    const g = document.getElementById("swal-limit-gb").value;
+                    const ip = document.getElementById("swal-limit-ip").value;
+                    return {
+                        gb: Math.max(0, parseInt(g) || 0),
+                        ip: Math.max(0, parseInt(ip) || 0)
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const fd = new FormData();
+                    fd.append("action", "limit");
+                    fd.append("ajax", "1");
+                    fd.append("user", user);
+                    fd.append("gb", result.value.gb);
+                    fd.append("ip", result.value.ip);
+                    postApiAction(fd, `อัปเดตลิมิตบัญชี ${user} สำเร็จ!`);
                 }
             });
         }
@@ -1282,6 +1615,37 @@ ${escapeHtml(customerText)}
                 });
         }
 
+        // ฟังก์ชันคัดลอกข้อความ รองรับทั้ง HTTPS และ HTTP ธรรมดา (ไม่ทำให้ปุ่มค้างหรือไม่มีการตอบสนอง)
+        function copyToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+            }
+            return fallbackCopy(text);
+        }
+
+        function fallbackCopy(text) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const ta = document.createElement("textarea");
+                    ta.value = text;
+                    ta.setAttribute("readonly", "");
+                    ta.style.position = "fixed";
+                    ta.style.left = "-9999px";
+                    ta.style.top = "0";
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    ta.setSelectionRange(0, 99999);
+                    const ok = document.execCommand("copy");
+                    document.body.removeChild(ta);
+                    if (ok) resolve();
+                    else reject(new Error("execCommand failed"));
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+
         // คัดลอกรูปแบบส่งลูกค้า
         function copyCustomerFormat(user, pass, expDate, gbText, ipText) {
             const text = `🛡️ ข้อมูลบัญชี SSH VPN
@@ -1296,26 +1660,78 @@ ${escapeHtml(customerText)}
 📦 โควต้าเน็ต: ${gbText}
 📱 จำกัด: ${ipText}
 ──────────────────────────────`;
-            copyCustomerFormatText(text);
+            copyCustomerFormatText(text, user);
         }
 
-        function copyCustomerFormatText(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: '📋 คัดลอกข้อมูลส่งลูกค้าแล้ว!',
-                    showConfirmButton: false,
-                    timer: 2000
-                });
+        function copyCustomerFormatText(text, username) {
+            copyToClipboard(text).then(() => {
+                showCustomerModal(text, true, username);
             }).catch(() => {
-                prompt("คัดลอกข้อความด้านล่างนี้:", text);
+                showCustomerModal(text, false, username);
             });
         }
 
+        function showCustomerModal(text, copySuccess, username) {
+            const title = username ? `📋 ข้อมูลบัญชี: ${escapeHtml(username)}` : `📋 ข้อมูลบัญชีสำหรับส่งลูกค้า`;
+            const statusHtml = copySuccess
+                ? `<div id="swal-copy-status" class="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-semibold flex items-center gap-2 mb-2 border border-emerald-200"><i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i><span>คัดลอกลงคลิปบอร์ดแล้ว! สามารถกดวางส่งให้ลูกค้าได้ทันที</span></div>`
+                : `<div id="swal-copy-status" class="p-2.5 rounded-xl bg-blue-50 text-blue-800 text-xs font-semibold flex items-center gap-2 mb-2 border border-blue-200"><i class="fa-solid fa-info-circle text-blue-600 text-sm"></i><span>สามารถกดปุ่ม "คัดลอกข้อความอีกครั้ง" หรือเลือกข้อความด้านล่างได้เลยครับ</span></div>`;
+
+            Swal.fire({
+                title: title,
+                html: `
+                    <div class="text-left text-xs space-y-3 p-1">
+                        ${statusHtml}
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">ข้อความสำหรับส่งลูกค้า (แก้ไขหรือดูข้อความก่อนส่งได้):</label>
+                            <textarea id="swal-customer-textarea" rows="11" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:bg-white focus:outline-none focus:border-blue-600 select-all leading-relaxed whitespace-pre">${escapeHtml(text)}</textarea>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="copyFromCustomerModal()" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all">
+                                <i class="fa-solid fa-copy"></i>
+                                <span>คัดลอกข้อความอีกครั้ง</span>
+                            </button>
+                            ${navigator.share ? `
+                            <button type="button" onclick="shareCustomerText()" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all">
+                                <i class="fa-solid fa-share-nodes"></i>
+                                <span>แชร์</span>
+                            </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'ปิดหน้าต่าง',
+                confirmButtonColor: '#64748b'
+            });
+        }
+
+        function copyFromCustomerModal() {
+            const ta = document.getElementById("swal-customer-textarea");
+            if (!ta) return;
+            const text = ta.value;
+            copyToClipboard(text).then(() => {
+                const status = document.getElementById("swal-copy-status");
+                if (status) {
+                    status.className = "p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-semibold flex items-center gap-2 mb-2 border border-emerald-200";
+                    status.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i><span>คัดลอกข้อความเรียบร้อยแล้ว! พร้อมส่งให้ลูกค้า</span>`;
+                }
+            }).catch(() => {
+                ta.focus();
+                ta.select();
+            });
+        }
+
+        function shareCustomerText() {
+            const ta = document.getElementById("swal-customer-textarea");
+            if (!ta || !navigator.share) return;
+            navigator.share({
+                title: 'ข้อมูลบัญชี SSH VPN',
+                text: ta.value
+            }).catch(() => {});
+        }
+
         function copySingleText(text) {
-            navigator.clipboard.writeText(text).then(() => {
+            copyToClipboard(text).then(() => {
                 Swal.fire({
                     toast: true,
                     position: 'top-end',
@@ -1324,6 +1740,8 @@ ${escapeHtml(customerText)}
                     showConfirmButton: false,
                     timer: 1200
                 });
+            }).catch(() => {
+                prompt("คัดลอกข้อความ:", text);
             });
         }
 
