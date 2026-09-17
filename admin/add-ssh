@@ -60,6 +60,10 @@ echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━�
 echo -e "\e[42m              บัญชี SSH Ovpn            \E[0m"
 echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 read -p "User: " LOGIN
+if [ -z "$LOGIN" ]; then
+  echo -e "\n\033[1;31mข้อผิดพลาด: กรุณาระบุชื่อผู้ใช้ (User)\033[0m\n"
+  exit 1
+fi
 read -p "Password: " PASSWD
 read -p "Days: " EXPIRED
 read -p "GB (0=unlimited): " LIMIT_GB

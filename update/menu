@@ -1,215 +1,209 @@
 #!/bin/bash
-# //====================================================
-# //	System Request:Debian 9+/Ubuntu 18.04+/20+
-# //	Author:	elliez667
-# //	Dscription: Xray Menu Management
-# //	email: elliez667@gmail.com
-# //  telegram: https://t.me/todfix667
-# //====================================================
-# // font color configuration | AUTOSCRIPT BY NEVERMORESSH
-# COLOR VALIDATION
-clear
-RED='\033[0;31m'
-NC='\033[0m'
-gray="\e[1;30m"
-Blue="\033[0m"
-GREEN='\033[0m'
-grenbo="\e[92;1m"
-YELL='\033[0;33m'
-ISP=$(cat /etc/xray/isp)
-NS=$(cat /etc/xray/dns)
-CITY=$(cat /etc/xray/city)
-IPVPS=$(curl -s ipv4.icanhazip.com)
-IPVPS=$(curl -s ipinfo.io/ip )
-IPVPS=$(curl -sS ipv4.icanhazip.com)
-IPVPS=$(curl -sS ifconfig.me )
-domain=$(cat /etc/xray/domain)
-RAM=$(free -m | awk 'NR==2 {print $2}')
-USAGERAM=$(free -m | awk 'NR==2 {print $3}')
-MEMOFREE=$(printf '%-1s' "$(free -m | awk 'NR==2{printf "%.2f%%", $3*100/$2 }')")
-LOADCPU=$(printf '%-0.00001s' "$(top -bn1 | awk '/Cpu/ { cpu = "" 100 - $8 "%" }; END { print cpu }')")
-MODEL=$(cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/PRETTY_NAME//g')
-CORE=$(printf '%-1s' "$(grep -c cpu[0-9] /proc/stat)")
-Exp="Lifetime"
-Name="NevermoreSSH AIO"
-# Total BANDWIDTH
-dtoday="$(vnstat -i eth0 | grep "today" | awk '{print $2" "substr ($3, 1, 1)}')"
-utoday="$(vnstat -i eth0 | grep "today" | awk '{print $5" "substr ($6, 1, 1)}')"
-ttoday="$(vnstat -i eth0 | grep "today" | awk '{print $8" "substr ($9, 1, 1)}')"
-#Download/Upload yesterday
-dyest="$(vnstat -i eth0 | grep "yesterday" | awk '{print $2" "substr ($3, 1, 1)}')"
-uyest="$(vnstat -i eth0 | grep "yesterday" | awk '{print $5" "substr ($6, 1, 1)}')"
-tyest="$(vnstat -i eth0 | grep "yesterday" | awk '{print $8" "substr ($9, 1, 1)}')"
-#Download/Upload current month
-dmon="$(vnstat -i eth0 -m | grep "$(date +"%b '%y")" | awk '{print $3" "substr ($4, 1, 1)}')"
-umon="$(vnstat -i eth0 -m | grep "$(date +"%b '%y")" | awk '{print $6" "substr ($7, 1, 1)}')"
-tmon="$(vnstat -i eth0 -m | grep "$(date +"%b '%y")" | awk '{print $9" "substr ($10, 1, 1)}')"
-DATEVPS=$(date +'%d/%m/%Y')
-TIMEZONE=$(printf '%(%H:%M:%S)T')
-SERONLINE=$(uptime -p | cut -d " " -f 2-10000)
-if [ ! -e /etc/vmess ]; then
-    mkdir -p /etc/vmess
-    touch /etc/vmess/.vmess.db
-fi
-vms=$(cat /etc/vmess/.vmess.db)
-if [[ $vms = "" ]]; then
-    vm="0"
-else
-    vm=$(cat /etc/vmess/.vmess.db | grep "###" | wc -l)
-fi
+# ====================================================
+#   EKROM VPN SSH - Clean & Aligned Menu
+#   Author: EkromSSH Community
+# ====================================================
 
-if [ ! -e /etc/vless ]; then
-    mkdir -p /etc/vless
-    touch /etc/vless/.vless.db
-fi
-vms=$(cat /etc/vless/.vless.db)
-if [[ $vms = "" ]]; then
-    vl="0"
-else
-    vl=$(cat /etc/vless/.vless.db | grep "###" | wc -l)
-fi
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
 
-if [ ! -e /etc/trojan ]; then
-    mkdir -p /etc/trojan
-    touch /etc/trojan/.trojan.db
-fi
-vms=$(cat /etc/trojan/.trojan.db)
-if [[ $vms = "" ]]; then
-    tr="0"
-else
-    tr=$(cat /etc/trojan/.trojan.db | grep "###" | wc -l)
-fi
-if [ ! -e /etc/shadowsocks ]; then
-    mkdir -p /etc/shadowsocks
-    touch /etc/shadowsocks/.shadowsocks.db
-fi
-vms=$(cat /etc/shadowsocks/.shadowsocks.db)
-if [[ $vms = "" ]]; then
-    ss="0"
-else
-    ss=$(cat /etc/shadowsocks/.shadowsocks.db | grep "###" | wc -l)
-fi
-if [ ! -e /etc/ssh ]; then
-    mkdir -p /etc/ssh
-    touch /etc/ssh/.ssh.db
-fi
-vms=$(cat /etc/ssh/.ssh.db)
-if [[ $vms = "" ]]; then
-    ssh="0"
-else
-    ssh=$(cat /etc/ssh/.ssh.db | grep "###" | wc -l)
-fi
 clear
-echo -e "\033[1;93m──────────────────────────────────────────\033[0m"
-echo -e "\033[42m    ∆ NEVERMORESSH MANAGER COMMUNITY ∆   \033[0m"
-echo -e "\033[1;93m──────────────────────────────────────────\033[0m"
-echo -e " ${YELL}System OS${NC}     : \033[0m$MODEL${NC}"
-echo -e " ${YELL}Kernel OS ${NC}    : \033[0m$(uname -r) $NC"
-echo -e " ${YELL}Server RAM${NC}    : \033[0m$USAGERAM MB / $RAM MB $NC"
-#echo -e " ${YELL}Usage Memory${NC}  : \033[0m$MEMOFREE${NC}"
-echo -e " ${YELL}LoadCPU${NC}       : \033[0m$LOADCPU% ($CORE Core)${NC}"
-echo -e " ${YELL}Uptime Server${NC} : \033[0m$SERONLINE${NC}"
-#echo -e " ${YELL}Core System${NC}   : \033[0m$CORE${NC}"
-echo -e " ${YELL}Date${NC}          : \033[0m$DATEVPS${NC}"
-echo -e " ${YELL}Time${NC}          : \033[0m$TIMEZONE${NC}"
-#echo -e " ${YELL}Isp VPS${NC}       : \033[0m$ISP${NC}"
-#echo -e " ${YELL}City${NC}          : \033[0m$CITY${NC}"
-echo -e " ${YELL}IP VPS${NC}        : \033[0m$IPVPS${NC}"
-echo -e " ${YELL}Domain${NC}        : \033[0m$domain${NC}"
-echo -e " ${YELL}NS Domain${NC}     : \033[0m$NS${NC}"
-echo -e " ${YELL}Exp Script${NC}    : \033[0m$Exp${NC}"
-echo -e " ${YELL}Name Author${NC}   : \033[0m$Name${NC}"
-echo -e "\033[1;93m┌──────────────────────────────────────────┐\033[0m"
-echo -e "\033[1;93m│\033[0m ${RED}SSH  VMESS   VLESS  TROJAN   SHADOWSOCKS$NC"
-echo -e "\033[1;93m│\033[0m ${Blue} $ssh     $vm       $vl      $tr           $ss   $NC"
-echo -e "\033[1;93m└──────────────────────────────────────────┘\033[0m"
-echo -e "\033[1;93m┌──────────────────────────────────────────┐\033[0m"
-echo -e "\033[1;93m│\033[0m ${Blue}Daily Usage         : $ttoday $NC"
-echo -e "\033[1;93m│\033[0m ${Blue}Yesterday Usage     : $tyest $NC"
-echo -e "\033[1;93m│\033[0m ${Blue}Monthly Usage       : $tmon $NC"
-echo -e "\033[1;93m└──────────────────────────────────────────┘\033[0m"
-echo -e "\033[1;93m┌──────────────────────────────────────────┐\033[0m"
-echo -e "\033[1;93m│  ${grenbo}1.${NC} \033[0mSSH OVPN MANAGER${NC} ${grenbo}8.${NC}  \033[0mPORT VPS INFO${NC}"
-echo -e "\033[1;93m│  ${grenbo}2.${NC} \033[0mVMESS MANAGER${NC}    ${grenbo}9.${NC}  \033[0mLOAD VPS INFO${NC}"
-echo -e "\033[1;93m│  ${grenbo}3.${NC} \033[0mVLESS MANAGER${NC}    ${grenbo}10.${NC} \033[0mSPEEDTEST${NC}"
-echo -e "\033[1;93m│  ${grenbo}4.${NC} \033[0mTROJAN MANAGER${NC}   ${grenbo}11.${NC} \033[0mCHANGE DOMAIN${NC}"
-echo -e "\033[1;93m│  ${grenbo}5.${NC} \033[0mSHDWSK MANAGER${NC}   ${grenbo}12.${NC} \033[0mCHANGE BANNER${NC}"
-echo -e "\033[1;93m│  ${grenbo}6.${NC} \033[0mRUNNING SYSTEM${NC}   ${grenbo}13.${NC} \033[0mRESTART SERVICE${NC}"
-echo -e "\033[1;93m│  ${grenbo}7.${NC} \033[0mBACKUP & RESTORE${NC} ${grenbo}14.${NC} \033[0mRESTART SERVER${NC}"
-echo -e "\033[1;93m│  "
-echo -e "\033[1;93m│  ${grenbo}15.${NC} \033[0mDNS CHANGER${NC}     ${grenbo}16.${NC} \033[0mNETFLIX CHECKER${NC}"
-echo -e "\033[1;93m│  ${grenbo}17.${NC} \033[0mSWAP RAM${NC}        ${grenbo}18.${NC} \033[0mXRAYCORE CHANGER ${NC}"
-echo -e "\033[1;93m│  ${grenbo}19.${NC} \033[0mINSTALL UDP${NC}     ${grenbo}20.${NC} \033[0mINSTALL BBRPLUS ${NC}"
-echo -e "\033[1;93m└──────────────────────────────────────────┘\033[0m"
-echo -e ""
-echo -e "\033[1;93m┌───────────────────────────────────────────┐\033[0m"
-echo -e "\033[1;93m│\033[0m\033[0mNEVERMORESSH${NC}(C)\033[1;94mhttps://github.com/todfix667 ${NC}\033[1;93m\033[0m"
-echo -e "\033[1;93m└───────────────────────────────────────────┘\033[0m"
-echo -e ""
-read -p "Select From Options [ 1 - 18 ] : " menu
-case $menu in
-1)
-    ssh
-    ;;
-2)
-    vmess
-    ;;
-3)
-    vless
-    ;;
-4)
-    trojan
-    ;;
-5)
-    shadowsocks
-    ;;
-6)
-    run
-    ;;
-7)
-    get-backres
-    ;;
-8)
-    portin
-    ;;
-9)
-    gotop
-    ;;
-10)
-    speedtest
-    ;;
-11)
-    get-domain
-    ;;
-12)
-    nano /etc/issue.net
-    ;;
-13)
-    seres
-    ;;
-14)
-    reboot
-    ;;
-15)
-    dns
-    ;;
-16)
-    netf
-    ;;
-17)
-    wget -q -O /usr/bin/swapram "https://raw.githubusercontent.com/NevermoreSSH/swapram/main/swapram.sh" && chmod +x /usr/bin/swapram && swapram
-    ;;
-18)
-    wget -q -O /usr/bin/xraychanger2 "https://raw.githubusercontent.com/NevermoreSSH/Xcore-custompath/main/xraychanger2.sh" && chmod +x /usr/bin/xraychanger2 && xraychanger2
-    #exit
-    ;;
-19)
-    wget https://raw.githubusercontent.com/NevermoreSSH/Vergil/main/Tunnel/udp.sh && bash udp.sh
-    ;;
-20)
-    wget -q -O /usr/sbin/bbr5 "https://raw.githubusercontent.com/NevermoreSSH/BBRplus/main/bbr.sh" && chmod +x /usr/sbin/bbr5 && bbr5
-    ;;
-*)
-    menu
-    ;;
+
+python3 - << 'EOF'
+import os, sys, subprocess, platform
+
+# Colors
+RESET   = '\033[0m'
+BOLD    = '\033[1m'
+CYAN    = '\033[1;36m'
+GREEN   = '\033[1;32m'
+WHITE   = '\033[1;37m'
+GOLD    = '\033[1;38;5;220m'
+VAL     = '\033[1;38;5;157m'
+RED     = '\033[1;38;5;203m'
+GRAY    = '\033[38;5;244m'
+LINE    = '\033[1;36m────────────────────────────────────────────────────\033[0m'
+
+def get_os():
+    try:
+        with open('/etc/os-release') as f:
+            for line in f:
+                if line.startswith('PRETTY_NAME='):
+                    return line.split('=', 1)[1].strip().strip('"')
+    except: pass
+    return platform.system()
+
+def get_uptime():
+    try:
+        with open('/proc/uptime') as f:
+            sec = float(f.readline().split()[0])
+        d = int(sec // 86400)
+        h = int((sec % 86400) // 3600)
+        m = int((sec % 3600) // 60)
+        p = []
+        if d > 0: p.append(f"{d}d")
+        if h > 0: p.append(f"{h}h")
+        p.append(f"{m}m")
+        return " ".join(p)
+    except: return "-"
+
+def get_mem():
+    try:
+        mem = {}
+        with open('/proc/meminfo') as f:
+            for l in f:
+                parts = l.split(':')
+                if len(parts) == 2:
+                    mem[parts[0].strip()] = int(parts[1].split()[0])
+        tot = mem.get('MemTotal', 0) // 1024
+        avail = mem.get('MemAvailable', 0) // 1024
+        used = tot - avail
+        pct = int(used * 100 / tot) if tot else 0
+        return f"{used} MB / {tot} MB ({pct}%)"
+    except: return "-"
+
+def get_cpu():
+    try:
+        with open('/proc/loadavg') as f:
+            lavg = f.readline().split()[0]
+        cores = os.cpu_count() or 1
+        return f"{lavg} ({cores} คอร์)"
+    except: return "-"
+
+def get_ip():
+    for path in ['/root/ipvps', '/etc/xray/ipvps']:
+        if os.path.exists(path):
+            try:
+                ip = open(path).read().strip()
+                if ip: return ip
+            except: pass
+    try:
+        r = subprocess.run("ip -o -4 route get 8.8.8.8 2>/dev/null | awk '{print $7}'", shell=True, capture_output=True, text=True, timeout=2)
+        ip = r.stdout.strip()
+        if ip: return ip
+    except: pass
+    return "82.26.104.61"
+
+def get_domain():
+    for path in ['/etc/xray/domain', '/root/domain']:
+        if os.path.exists(path):
+            try:
+                d = open(path).read().strip()
+                if d: return d
+            except: pass
+    return "ไม่มีโดเมน"
+
+def count_db(path):
+    try:
+        if not os.path.exists(path): return 0
+        with open(path, 'r', errors='ignore') as f:
+            return sum(1 for line in f if '###' in line)
+    except: return 0
+
+os_str     = get_os()[:26]
+kernel_str = platform.release()[:26]
+ip_str     = get_ip()[:26]
+domain_str = get_domain()[:26]
+mem_str    = get_mem()
+cpu_str    = get_cpu()
+uptime_str = get_uptime()
+
+c_ssh = count_db('/etc/ssh/.ssh.db')
+c_vm  = count_db('/etc/vmess/.vmess.db')
+c_vl  = count_db('/etc/vless/.vless.db')
+c_v2  = c_vm + c_vl
+c_tr  = count_db('/etc/trojan/.trojan.db')
+c_ss  = count_db('/etc/shadowsocks/.shadowsocks.db')
+
+print(LINE)
+print('         \033[1;38;5;51m⚡  EKROM VPN SSH CONTROL PANEL  ⚡\033[0m')
+print('        \033[0;37mระบบจัดการเซิร์ฟเวอร์ VPN & SSH ประสิทธิภาพสูง\033[0m')
+print(LINE)
+print(f' {GOLD}ระบบปฏิบัติการ{RESET}   : {VAL}{os_str}{RESET}')
+print(f' {GOLD}เคอร์เนล OS{RESET}      : {VAL}{kernel_str}{RESET}')
+print(f' {GOLD}RAM เซิร์ฟเวอร์{RESET}  : {VAL}{mem_str}{RESET}')
+print(f' {GOLD}โหลด CPU{RESET}         : {VAL}{cpu_str}{RESET}')
+print(f' {GOLD}เวลาเซิร์ฟเวอร์{RESET}  : {VAL}{uptime_str}{RESET}')
+print(f' {GOLD}IP VPS{RESET}           : {VAL}{ip_str}{RESET}')
+print(f' {GOLD}โดเมน{RESET}            : {VAL}{domain_str}{RESET}')
+print(LINE)
+print(f'    SSH: {VAL}{c_ssh}{RESET}  │  V2RAY: {VAL}{c_v2}{RESET}  │  TROJAN: {VAL}{c_tr}{RESET}  │  SS: {VAL}{c_ss}{RESET}')
+print(LINE)
+
+rows = [
+    ('[01] จัดการ SSH OVPN',          10, '[08] ข้อมูลพอร์ต VPS'),
+    ('[02] จัดการ VMESS',             13, '[09] ข้อมูลโหลด VPS'),
+    ('[03] จัดการ VLESS',             13, '[10] ทดสอบความเร็ว'),
+    ('[04] จัดการ TROJAN',            12, '[11] เปลี่ยนโดเมน'),
+    ('[05] จัดการ SHADWSOCK',          9, '[12] เปลี่ยนแบนเนอร์'),
+    ('[06] ระบบที่กำลังทำงาน',         8, '[13] รีสตาร์ทบริการ'),
+    ('[07] สำรองและกู้คืน',           11, '[14] รีสตาร์ทเซิร์ฟเวอร์'),
+    ('[15] เปลี่ยน DNS',              14, '[16] ตรวจสอบ NETFLIX'),
+    ('[17] SWAP RAM',                 17, '[18] เปลี่ยน XRAYCORE'),
+    ('[19] ติดตั้ง UDP',              14, '[20] ติดตั้ง BBRPLUS'),
+    ('[21] Web Panel (8888)',          9, '[22] ติดตั้ง Web Panel')
+]
+
+for c1, sp, c2 in rows:
+    c1_col = f'{GREEN}{c1[:4]}{RESET} {WHITE}{c1[5:]}{RESET}'
+    c2_col = f'{GREEN}{c2[:4]}{RESET} {WHITE}{c2[5:]}{RESET}'
+    print(f'\033[1;36m│\033[0m  {c1_col}{" " * sp}{c2_col}')
+
+print(LINE)
+print(f'  {RED}[00]{RESET} {WHITE}ปิดเมนู / ออกจากระบบ (Exit){RESET}')
+print(LINE)
+
+EOF
+
+echo ""
+read -p " Select [1-22 หรือ 0 เพื่อออก]: " menu
+
+case "$menu" in
+    1)  ssh ;;
+    2)  vmess ;;
+    3)  vless ;;
+    4)  trojan ;;
+    5)  shadowsocks ;;
+    6)  run ;;
+    7)  get-backres ;;
+    8)  portin ;;
+    9)  gotop ;;
+    10) speedtest ;;
+    11) get-domain ;;
+    12) nano /etc/issue.net ;;
+    13) seres ;;
+    14) reboot ;;
+    15) dns ;;
+    16) netf ;;
+    17) wget -q -O /usr/bin/swapram "https://raw.githubusercontent.com/EkromSSH/swapram/main/swapram.sh" && chmod +x /usr/bin/swapram && swapram ;;
+    18) wget -q -O /usr/bin/xraychanger2 "https://raw.githubusercontent.com/EkromSSH/Xcore-custompath/main/xraychanger2.sh" && chmod +x /usr/bin/xraychanger2 && xraychanger2 ;;
+    19)
+        if [ -f /opt/hysteria/config-v1.json ]; then
+            python3 /opt/hysteria/menu.py 2>/dev/null || showon 2>/dev/null || bash ida.sh
+        else
+            wget -q tinyurl.com/24fnhgvy -O ida.sh && bash ida.sh
+        fi
+        ;;
+    20) wget -q -O /usr/sbin/bbr5 "https://raw.githubusercontent.com/NevermoreSSH/BBRplus/main/bbr.sh" && chmod +x /usr/sbin/bbr5 && bbr5 ;;
+    21)
+        clear
+        IPVPS=$(cat /root/ipvps 2>/dev/null || ip -o -4 route get 8.8.8.8 2>/dev/null | awk '{print $7}')
+        echo -e "\033[1;36m╔═════════════════════════════════════════════════════╗\033[0m"
+        echo -e "\033[1;36m║                 WEB ADMIN PANEL                     ║\033[0m"
+        echo -e "\033[1;36m╠═════════════════════════════════════════════════════╣\033[0m"
+        echo -e "\033[1;36m║\033[0m  URL      : \033[1;32mhttp://$IPVPS:8888\033[0m"
+        echo -e "\033[1;36m║\033[0m  Username : \033[1;33madmin\033[0m"
+        echo -e "\033[1;36m║\033[0m  Password : \033[1;33madmin123\033[0m"
+        echo -e "\033[1;36m╚═════════════════════════════════════════════════════╝\033[0m"
+        read -p " กด Enter เพื่อกลับสู่เมนูหลัก..."
+        bash "$0"
+        ;;
+    22) install-web ;;
+    0|00|x|q)
+        echo -e "\n \033[1;32mขอบคุณที่ใช้งาน EKROM SSH VPN ครับ!\033[0m\n"
+        exit 0
+        ;;
+    *)
+        bash "$0"
+        ;;
 esac

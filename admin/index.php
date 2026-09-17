@@ -172,6 +172,7 @@ if (!empty($action)) {
         $out = [];
         $ret = 0;
         exec("/usr/local/bin/su-exec /usr/local/bin/ssh-admin delete " . escapeshellarg($u) . " 2>&1", $out, $ret);
+        exec("sed -i -E '/^###\\s+.*\\b" . escapeshellarg($u) . "\\b/d' /etc/ssh/.ssh.db 2>/dev/null");
         if ($ret === 0) {
             $isAjax ? json_resp(["status" => "success", "message" => "ลบบัญชี $u ออกจากเซิร์ฟเวอร์เรียบร้อยแล้ว"]) : header("Location: /?msg=del_" . urlencode($u));
         } else {
@@ -291,6 +292,10 @@ if (file_exists($dbFile)) {
         if (preg_match('/^###\\s+([^\\s]+)\\s+(\\d+)(?:\\s+(\\d+)\\s+(\\d+))?/', $line, $m)) {
             $uName = $m[1];
             $expTs = (int)$m[2];
+            // ข้ามรายการที่เสียหาย เช่น ชื่อว่างจน timestamp กลายเป็นชื่อผู้ใช้ และ expTs เป็น 0
+            if ($expTs === 0 && preg_match('/^\\d{8,}$/', $uName)) {
+                continue;
+            }
             $limitGb = isset($m[3]) ? (int)$m[3] : 0;
             $limitIp = isset($m[4]) ? (int)$m[4] : 0;
             $usersList[$uName] = [
